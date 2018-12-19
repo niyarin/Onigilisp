@@ -1,3 +1,4 @@
-#ifndef EBM_H
-#define EBM_H
+#ifndef EBM_FRONTEND_H
+#define EBM_FRONTEND_H
+
 #endif
