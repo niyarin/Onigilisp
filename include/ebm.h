@@ -1,6 +1,10 @@
 #ifndef EBM_H
 #define EBM_H
 
+#include<stdint.h>
+#include<stddef.h>
+#include<stdlib.h>
+
 //
 //CONFIGS
 //
@@ -26,6 +30,24 @@
 //STATIC OBJECTS
 //
 #define EBM_FALSE 0
+#define EBM_UNDEF (0+(1<<EBM_CONFIG_POINTER_INFORMATION_SIZE))
+
+//
+//OBJECT MANAGER
+//
+typedef uintptr_t (*EBM_ALLOCATOR)(size_t,uintptr_t);
+uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env);
+void EBM_free_wrapper(uintptr_t obj,uintptr_t env);
+
+//
+//RECORD TYPES
+//
+#define EBM_BUILT_IN_RECORD_TYPE_PORT (5<<EBM_CONFIG_POINTER_INFORMATION_SIZE)
+
+//RECORD OPERATIONS
+//
+uintptr_t EBM_allocate_record(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t env);
+uintptr_t EBM_record_primitive_set(uintptr_t record,size_t index,uintptr_t p);
 
 //
 //OPTIMIZATION MACROS FOR C　

@@ -10,6 +10,9 @@ void main_load_1script(char *filename){
         //TODO:OUTPUT ERROR MESSAGE
         exit(1);
     }
+    EBM_ALLOCATOR allocator = EBM_malloc_wrapper;
+    uintptr_t allocator_env = 0;
+    uintptr_t port = EBM_frontend_allocate_input_file_port(fp,allocator,allocator_env);
 }
 
 int main(int argc,char **argv){
