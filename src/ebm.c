@@ -2,11 +2,19 @@
 
 uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env){
     void* res =  malloc(size);
-    if (res == NULL){
+    if (EBM_COPT_UNLIKELY(res == NULL)){
         //TODO: OUTPUT ERROR MESSAGE.
         exit(1);
     }
     return (uintptr_t)res;
+}
+
+
+uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+    uintptr_t* pair = (uintptr_t*)allocator(sizeof(uintptr_t) * 2,allocator_env);
+    pair[0] = car;
+    pair[1] = cdr;
+    return EBM_ADD_TYPE(pair,EBM_TYPE_PAIR);
 }
 
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env){

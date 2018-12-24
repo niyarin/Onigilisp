@@ -27,7 +27,6 @@ uintptr_t EBM_frontend_allocate_input_file_port(FILE *fp,EBM_ALLOCATOR allocator
     EBM_record_primitive_set_CA(res,
                    3,
                   (uintptr_t)fp);
-
     return res;
 }
 
@@ -56,9 +55,59 @@ uintptr_t EBM_frontend_allocate_input_string_port(uintptr_t ebm_string,EBM_ALLOC
 }
 
 
+
+
 //
 //      READ FUNCTIONS
 //
+
+void EBM_u32_to_u8(uint32_t c,unsigned char *res){
+    if (c < 128){
+        res[0] = c;
+        res[1] = 0;
+    }else if (c <= 2047){//11bit
+        res[0] = (c >>6) + 192;//192=11000000
+        res[1] = (c & 63) + 128;//128 = 10000000
+        res[2] = 0;
+    }else if (c <= 65535){//16bit
+        res[0] = (c >>12) + 224;//224=11100000
+        res[1] = ((c & 4032)>>6) + 128;
+        res[2] = (c & 63) + 128;
+        res[3] = 0;
+    }else{
+        res[0] = (c >>18) + 240;//240=11110000
+        res[1] = ((c & 258048)>>12) + 128;
+        res[2] = ((c & 4032)>>6) + 128;
+        res[3] = (c & 63) + 128;
+        res[4] = 0;
+    }
+    //ERROR
+}
+
+//Schemeでは使わないからstaticで良い。(あと、2文字以上のungetcは本当はダメ)
+void EBM_ungetc(uint32_t c,uintptr_t port){
+    if (EBM_IS_INPUT_PORT_CR(port)){
+        if (EBM_IS_FILE_PORT_CR(port)){
+
+            char tmpc[5];//unsignedでなくて良い?
+            EBM_u32_to_u8(c,tmpc);
+            int i=0;
+            while (tmpc[i]){
+                i++;
+            }
+            FILE *fp = (FILE*)EBM_record_ref_CA(port,3);
+            while (i>0){
+                i--;
+                ungetc(tmpc[i],fp); 
+            }
+        }
+    }else{
+    
+        
+    }
+}
+
+
 
 static uint32_t fread_char_utf8(FILE* fp){
     //冗長なutf8コードを潰す必要性はなさそう。
@@ -145,23 +194,104 @@ uint32_t EBM_read_char_CR(uintptr_t port){
     }
 }
 
-uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+
+uintptr_t OLISP_read1_with_character_table(OLISP_state *state);
+
+uintptr_t OLISP_read_function_read_list(OLISP_state *state){
+    printf("::::::::::::::::::::[read list]\n");
     /*
-    uintptr_t res = EBM_char_table_create(128,0,allocator,allocator_env);
-    return res;
+    if (state->arg_size == 3){
+        uintptr_t port = state->args1[0];
+        uintptr_t target_ebm_c = state->args1[1];
+        uintptr_t reader_config_ptr = state->args1[2];
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_record_ref_CA(reader_config_ptr,1));
+
+        uintptr_t res_top_cell = EBM_allocate_pair(EBM_NULL,EBM_NULL,state->allocator,state->allocator_env);
+        uintptr_t cell = res_top_cell;
+        while (1){   
+            uintptr_t lobject = OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,EBM_allocate_char(')'));
+            if (lobject == EBM_DUMMY_OBJECT){
+                break;
+            }
+            EBM_SET_CDR(cell,EBM_allocate_pair(lobject,EBM_NULL,state->allocator,state->allocator_env));
+            cell = EBM_CDR(cell);
+        }
+        return EBM_CDR(res_top_cell);
+    }
+    exit(1);
     */
 }
 
 
-uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
+uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+    uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
+    EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
+    return res;
+}
+
+static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t max_length,OLISP_state *state){
+    if (length == max_length){
+        token_string = (uint32_t*)realloc(token_string,sizeof(uint32_t) * (max_length + 1));
+    }
+    token_string[length]  = 0;
     
+    
+    EBM_ALLOCATOR allocator = state->allocator;
+    uintptr_t allocator_env = state->allocator_env;
+    return EBM_allocate_symbol_CA(token_string,allocator,allocator_env);
 }
 
 
-uintptr_t EBM_read(uintptr_t port){
+uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
+    if (state->arg_size >= 3){
+        uintptr_t port = state->args1[0];
+        uintptr_t character_table = state->args1[1];
+
+        uint32_t delim_cc= 0;
+        if (state->arg_size >= 4){
+            delim_cc = EBM_char2unicode_CA(state->args1[3]);
+        }
+
+        
+        size_t token_max_length = 8;
+        uint32_t *token_string = (uint32_t*)malloc(sizeof(uint32_t)*token_max_length);
+
+        size_t token_length = 0;
+        while (1){
+            uint32_t cc = EBM_read_char_CR(port);
+            printf("%c\n",cc);
+            uintptr_t read_function_apair = EBM_char_table_ref_CA(character_table,cc);
+
+            if (read_function_apair != EBM_FALSE){
+                uintptr_t config_ptr = state->args1[2];
+                if (token_length != 0){
+                    EBM_ungetc(cc,port);
+                    return _EBM_analyze_token(token_string,token_length,token_max_length,state);
+                }
+
+                if (delim_cc){
+                    if (delim_cc == cc){
+                        printf(":::::::::::::::::::::::::[CLOSE PAREN]\n");
+                        return EBM_DUMMY_OBJECT;
+                    }
+                }
+                uintptr_t read_function = EBM_CDR(read_function_apair);
+                return OLISP_cfun_call(state,OLISP_fun_call,4,read_function,port, EBM_allocate_character_CA(cc),EBM_NULL);
+            }
+            break;
+        }
+    }
 }
 
+uintptr_t OLISP_read(OLISP_state *state){
+    uintptr_t port;
+    if (state->arg_size >= 1){
+        port = state->args1[0];
+    }else if (state->arg_size == 0){
+        port = EBM_frontend_allocate_input_file_port(stdout,state->allocator,state->allocator_env);
+    }
 
-
-
+    uintptr_t read_table = EBM_frontend_create_default_reader_table(state->allocator,state->allocator_env);
+    OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,EBM_NULL);
+}
 

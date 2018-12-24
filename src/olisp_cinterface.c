@@ -37,3 +37,27 @@ uintptr_t OLISP_cfun_call(OLISP_state *state,OLISP_cfun cfun,uintptr_t arg_size,
     
     return cfun(state);
 }
+
+uintptr_t OLISP_create_function_for_ebm(OLISP_cfun cfun,EBM_ALLOCATOR  allocator,uintptr_t allocator_env){
+    uintptr_t res = EBM_allocate_record_CA(3,allocator,allocator_env);
+    EBM_record_primitive_set_CA(res,0,EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION);
+    EBM_record_primitive_set_CA(res,1,0);//OLISP fun は常に0
+    EBM_record_primitive_set_CA(res,2,(uintptr_t)cfun);
+    return res;
+}
+
+uintptr_t OLISP_fun_call(OLISP_state *state){
+    if (state->arg_size>=1){
+        uintptr_t fun_object = state->args1[0];
+        if (EBM_record_ref_CA(fun_object,1) == 0){
+            int i;
+            for (i=1;i<state->arg_size;i++){
+                state->args1[i-1] = state->args1[i];
+            }
+            state->arg_size-=1;
+            OLISP_cfun cfun = (OLISP_cfun)EBM_record_ref_CA(fun_object,2);
+            return cfun(state);
+        }
+    }
+    //TODO:未実装
+}

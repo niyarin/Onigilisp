@@ -33,9 +33,11 @@ typedef struct {
 typedef uintptr_t (*OLISP_cfun)(OLISP_state*);
 
 uintptr_t OLISP_cfun_call(OLISP_state *state,OLISP_cfun cfun,uintptr_t arg_size,...);
+uintptr_t OLISP_fun_call(OLISP_state *state);
 
 void OLISP_set_arg(OLISP_state *state,uintptr_t pos,uintptr_t arg);
 void OLISP_set_arg_size(OLISP_state *state,uintptr_t size);
+uintptr_t OLISP_create_function_for_ebm(OLISP_cfun cfun,EBM_ALLOCATOR  allocator,uintptr_t allocator_env);
 
 
 
