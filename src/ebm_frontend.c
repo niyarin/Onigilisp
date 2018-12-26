@@ -201,20 +201,19 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
-        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_record_ref_CA(reader_config_ptr,1));
-        /*
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
         uintptr_t res_top_cell = EBM_allocate_pair(EBM_NULL,EBM_NULL,state->allocator,state->allocator_env);
         uintptr_t cell = res_top_cell;
+
         while (1){   
-            uintptr_t lobject = OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,EBM_allocate_char(')'));
+            uintptr_t lobject = OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,EBM_allocate_character_CA(')'));
             if (lobject == EBM_DUMMY_OBJECT){
                 break;
             }
-            EBM_SET_CDR(cell,EBM_allocate_pair(lobject,EBM_NULL,state->allocator,state->allocator_env));
+            EBM_PRIMITIVE_SET_CDR(cell,EBM_allocate_pair(lobject,EBM_NULL,state->allocator,state->allocator_env));
             cell = EBM_CDR(cell);
         }
         return EBM_CDR(res_top_cell);
-        */
     }
     exit(1);
 }
@@ -223,6 +222,7 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
     EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
+
     return res;
 }
 
