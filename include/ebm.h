@@ -121,7 +121,7 @@ uintptr_t EBM_allocate_symbol_CA(uint32_t *symbol,EBM_ALLOCATOR allocator,uintpt
 //POINTER BOX OPERATIONS
 //
 uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uintptr_t env);
-#define EBM_pointer_box_ref(pointer_box) EBM_record_ref(pointer_box,1)
+#define EBM_pointer_box_ref_CR(pointer_box) EBM_record_ref_CA(pointer_box,1)
 
 //
 //OPTIMIZATION MACROS FOR C　
