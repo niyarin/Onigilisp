@@ -219,9 +219,18 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
 }
 
 
+uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
+    printf("::::::::::::::::::::::::::::::::::::[RPAREN]\n");
+    exit(1);
+    return EBM_NULL;
+}
+
+
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
     EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
+
+    EBM_char_table_primitive_insert_CA(res,')',OLISP_create_function_for_ebm(OLISP_read_function_read_rparen,allocator,allocator_env),allocator,allocator_env);
 
     return res;
 }
