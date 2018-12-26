@@ -193,6 +193,14 @@ uint32_t EBM_read_char_CR(uintptr_t port){
 }
 
 
+uint32_t EBM_peek_char(uintptr_t port){
+    uint32_t res = EBM_read_char_CR(port);
+    if (res != EOF){
+        EBM_ungetc(res,port);
+    }
+    return res;
+}
+
 uintptr_t OLISP_read1_with_character_table(OLISP_state *state);
 
 uintptr_t OLISP_read_function_read_list(OLISP_state *state){
@@ -248,6 +256,56 @@ uintptr_t OLISP_read_function_read_newline(OLISP_state *state){//TODO:あとで�
     }
 }
 
+uintptr_t OLISP_read_function_read_dispatch_pattern(OLISP_state *state){
+    printf("DISPATCH\n");
+    uintptr_t port = state->args1[0];
+    uintptr_t cc = EBM_char2unicode_CR(state->args1[1]);
+    uintptr_t reader_config_ptr = state->args1[2];
+    OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+    
+    uintptr_t dispatch_table_apair = EBM_char_table_ref_CA(reader_config->dispatch_table,cc);
+
+    if (dispatch_table_apair != EBM_FALSE){
+        uintptr_t secound_dispatch_table = EBM_CDR(dispatch_table_apair);
+
+        uint32_t cc2 = EBM_peek_char(port);
+        uintptr_t read_function_apair = EBM_char_table_ref_CA(secound_dispatch_table,cc2);
+        if (read_function_apair != EBM_FALSE){
+             uintptr_t read_function = EBM_CDR(read_function_apair);
+            return OLISP_cfun_call(state,OLISP_fun_call,5,read_function,port,EBM_allocate_character_CA(cc),EBM_allocate_character_CA(cc2),reader_config_ptr);
+        }
+    }
+    exit(1);
+}
+
+
+uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
+    uintptr_t port = state->args1[0];
+    uintptr_t cc1 =  EBM_char2unicode_CR(state->args1[1]);
+    uintptr_t cc2 =  EBM_char2unicode_CR(state->args1[2]);
+    
+    uintptr_t reader_config_ptr = state->args1[3];
+    if (cc2 == 't'){
+ 
+        printf("::::::::::::::::::::[read true]\n");
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+        uintptr_t maybe_true = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+        //maybe_true must be t or true symbol.
+
+        //TODO:check
+
+        
+        return EBM_TRUE;
+    }else if (cc2 == 'f'){
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+        uintptr_t maybe_false = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);  
+        printf("::::::::::::::::::::[read false]\n");
+        return EBM_FALSE;
+    }
+    exit(1);
+}
+
+
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
     EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
@@ -257,8 +315,24 @@ uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintp
     EBM_char_table_primitive_insert_CA(res,' ',OLISP_create_function_for_ebm(OLISP_read_function_read_space,allocator,allocator_env),allocator,allocator_env);
 
     EBM_char_table_primitive_insert_CA(res,'\n',OLISP_create_function_for_ebm(OLISP_read_function_read_newline,allocator,allocator_env),allocator,allocator_env);
+
+    EBM_char_table_primitive_insert_CA(res,'#',OLISP_create_function_for_ebm(OLISP_read_function_read_dispatch_pattern,allocator,allocator_env),allocator,allocator_env);
     return res;
 }
+
+uintptr_t EBM_frontend_create_default_dispatch_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+    uintptr_t res = EBM_char_table_create_CA(8,0,allocator,allocator_env);
+    
+    uintptr_t sharp_dispatcher = EBM_char_table_create_CA(16,0,allocator,allocator_env);
+    EBM_char_table_primitive_insert_CA(res,'#',sharp_dispatcher,allocator,allocator_env);
+    {
+        EBM_char_table_primitive_insert_CA(sharp_dispatcher,'t',OLISP_create_function_for_ebm( OLISP_read_dispatch_function_read_boolean,allocator,allocator_env),allocator,allocator_env);
+        EBM_char_table_primitive_insert_CA(sharp_dispatcher,'f',OLISP_create_function_for_ebm( OLISP_read_dispatch_function_read_boolean,allocator,allocator_env),allocator,allocator_env);
+    }
+    return res;
+}
+
+
 
 static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t max_length,OLISP_state *state){
     if (length == max_length){
@@ -280,7 +354,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
 
         uint32_t delim_cc= 0;
         if (state->arg_size >= 4){
-            delim_cc = EBM_char2unicode_CA(state->args1[3]);
+            delim_cc = EBM_char2unicode_CR(state->args1[3]);
         }
     
         
@@ -318,6 +392,7 @@ uintptr_t OLISP_read(OLISP_state *state){
     uintptr_t port;
     uintptr_t config_ptr = EBM_NULL;
     uintptr_t read_table;
+    uintptr_t dispatch_table;
     int pass_config_flag = 0;
 
     if (state->arg_size >= 1){
@@ -335,8 +410,10 @@ uintptr_t OLISP_read(OLISP_state *state){
     if (!pass_config_flag){
         OLISP_reader_config reader_config;
         read_table = EBM_frontend_create_default_reader_table(state->allocator,state->allocator_env);
+        dispatch_table =  EBM_frontend_create_default_dispatch_table(state->allocator,state->allocator_env);
 
         reader_config.read_function_table = read_table;
+        reader_config.dispatch_table = dispatch_table;
         config_ptr = EBM_allocate_pointer_box_CA((uintptr_t)&reader_config,state->allocator,state->allocator_env);
     }
     OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,config_ptr);
