@@ -78,6 +78,14 @@ uintptr_t EBM_allocate_vector_CA(size_t size,EBM_ALLOCATOR allocator,uintptr_t e
 
 
 uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t object){
-    //ライトバリアいる
     EBM_record_primitive_set_CA(vector,index+2,object);
+}
+
+
+
+uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uintptr_t env){
+    uintptr_t res = EBM_allocate_record_CA(2,allocator,env);
+    EBM_record_primitive_set_CA(res,0,EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX);
+    EBM_record_primitive_set_CA(res,1,val);
+    return res;
 }

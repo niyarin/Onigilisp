@@ -88,6 +88,7 @@ uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr
 #define EBM_BUILT_IN_RECORD_TYPE_SYMBOL EBM_allocate_FX_NUMBER_CA(1)
 #define EBM_BUILT_IN_RECORD_TYPE_PORT EBM_allocate_FX_NUMBER_CA(5)
 #define EBM_BUILT_IN_RECORD_TYPE_VECTOR EBM_allocate_FX_NUMBER_CA(2)
+#define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
 #define EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION EBM_allocate_FX_NUMBER_CA(52)
 //
 //RECORD OPERATIONS
@@ -116,6 +117,11 @@ uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t ob
 
 uintptr_t EBM_allocate_symbol_CA(uint32_t *symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 
+//
+//POINTER BOX OPERATIONS
+//
+uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uintptr_t env);
+#define EBM_pointer_box_ref(pointer_box) EBM_record_ref(pointer_box,1)
 
 //
 //OPTIMIZATION MACROS FOR C　
