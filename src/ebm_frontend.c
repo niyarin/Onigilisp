@@ -226,12 +226,37 @@ uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
 }
 
 
+uintptr_t OLISP_read_function_read_space(OLISP_state *state){
+    if (state->arg_size == 3){
+        printf("::::::::::::::::::::::::::::::::::::[SP]\n");
+        uintptr_t port = state->args1[0];
+        uintptr_t target_ebm_c = state->args1[1];
+        uintptr_t reader_config_ptr = state->args1[2];
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+        return OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+    }
+}
+
+uintptr_t OLISP_read_function_read_newline(OLISP_state *state){//TODO:あとで行番号の追加
+    if (state->arg_size == 3){
+        printf("::::::::::::::::::::::::::::::::::::[NEWLINE]\n");
+        uintptr_t port = state->args1[0];
+        uintptr_t target_ebm_c = state->args1[1];
+        uintptr_t reader_config_ptr = state->args1[2];
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+        return OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+    }
+}
+
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
     EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
 
     EBM_char_table_primitive_insert_CA(res,')',OLISP_create_function_for_ebm(OLISP_read_function_read_rparen,allocator,allocator_env),allocator,allocator_env);
 
+    EBM_char_table_primitive_insert_CA(res,' ',OLISP_create_function_for_ebm(OLISP_read_function_read_space,allocator,allocator_env),allocator,allocator_env);
+
+    EBM_char_table_primitive_insert_CA(res,'\n',OLISP_create_function_for_ebm(OLISP_read_function_read_newline,allocator,allocator_env),allocator,allocator_env);
     return res;
 }
 
