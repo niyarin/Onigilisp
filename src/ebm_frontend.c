@@ -3,8 +3,6 @@
 #include "olisp_cinterface.h"
 
 typedef struct {
-   EBM_ALLOCATOR allocator;
-   uintptr_t allocator_env;
    uintptr_t line_manager;
    uintptr_t read_function_table;
    uintptr_t dispatch_table;
@@ -199,13 +197,12 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state);
 
 uintptr_t OLISP_read_function_read_list(OLISP_state *state){
     printf("::::::::::::::::::::[read list]\n");
-    /*
     if (state->arg_size == 3){
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_record_ref_CA(reader_config_ptr,1));
-
+        /*
         uintptr_t res_top_cell = EBM_allocate_pair(EBM_NULL,EBM_NULL,state->allocator,state->allocator_env);
         uintptr_t cell = res_top_cell;
         while (1){   
@@ -217,9 +214,9 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
             cell = EBM_CDR(cell);
         }
         return EBM_CDR(res_top_cell);
+        */
     }
     exit(1);
-    */
 }
 
 
@@ -251,7 +248,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
         if (state->arg_size >= 4){
             delim_cc = EBM_char2unicode_CA(state->args1[3]);
         }
-
+    
         
         size_t token_max_length = 8;
         uint32_t *token_string = (uint32_t*)malloc(sizeof(uint32_t)*token_max_length);
@@ -276,7 +273,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
                     }
                 }
                 uintptr_t read_function = EBM_CDR(read_function_apair);
-                return OLISP_cfun_call(state,OLISP_fun_call,4,read_function,port, EBM_allocate_character_CA(cc),EBM_NULL);
+                return OLISP_cfun_call(state,OLISP_fun_call,4,read_function,port, EBM_allocate_character_CA(cc),config_ptr);
             }
             break;
         }
@@ -285,13 +282,29 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
 
 uintptr_t OLISP_read(OLISP_state *state){
     uintptr_t port;
+    uintptr_t config_ptr = EBM_NULL;
+    uintptr_t read_table;
+    int pass_config_flag = 0;
+
     if (state->arg_size >= 1){
         port = state->args1[0];
+        if (state->arg_size >= 2){
+            pass_config_flag = 1;
+            config_ptr = state->args1[1];
+            read_table = ((OLISP_reader_config*)(EBM_pointer_box_ref_CR(config_ptr)))->read_function_table;
+        }
     }else if (state->arg_size == 0){
         port = EBM_frontend_allocate_input_file_port(stdout,state->allocator,state->allocator_env);
     }
 
-    uintptr_t read_table = EBM_frontend_create_default_reader_table(state->allocator,state->allocator_env);
-    OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,EBM_NULL);
+
+    if (!pass_config_flag){
+        OLISP_reader_config reader_config;
+        read_table = EBM_frontend_create_default_reader_table(state->allocator,state->allocator_env);
+
+        reader_config.read_function_table = read_table;
+        config_ptr = EBM_allocate_pointer_box_CA((uintptr_t)&reader_config,state->allocator,state->allocator_env);
+    }
+    OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,config_ptr);
 }
 
