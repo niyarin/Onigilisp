@@ -52,7 +52,48 @@ uintptr_t EBM_frontend_allocate_input_string_port(uintptr_t ebm_string,EBM_ALLOC
     return res;
 }
 
+uintptr_t EBM_frontend_allocate_output_file_port_CA(FILE *fp,EBM_ALLOCATOR allocator,uintptr_t env){
+    uintptr_t res = EBM_allocate_record_CA(5,allocator,env);
+    EBM_record_primitive_set_CA(res, 0,
+                   EBM_BUILT_IN_RECORD_TYPE_PORT );
+    
+    EBM_record_primitive_set_CA(res,
+                   1,
+                   EBM_FRONTEND_OUTPUT_PORT);
 
+    EBM_record_primitive_set_CA(res,
+                   2,
+                   EBM_FRONTEND_FILE_PORT);
+    EBM_record_primitive_set_CA(res,
+                   3,
+                  (uintptr_t)fp);
+    return res;
+}
+
+
+uintptr_t EBM_frontend_allocate_output_string_port(uintptr_t ebm_string,EBM_ALLOCATOR allocator,uintptr_t env){
+    uintptr_t res = EBM_allocate_record_CA(5,allocator,env);
+    EBM_record_primitive_set_CA(res,
+                   0,
+                   EBM_BUILT_IN_RECORD_TYPE_PORT );
+    
+    EBM_record_primitive_set_CA(res,
+                   EBM_FRONTEND_OUTPUT_PORT,
+                   0);
+
+
+    EBM_record_primitive_set_CA(res,
+                   2,
+                   EBM_FRONTEND_STRING_PORT);
+    EBM_record_primitive_set_CA(res,
+                   3,
+                  ebm_string);
+
+    EBM_record_primitive_set_CA(res,
+                   4,
+                   0);
+    return res;
+}
 
 
 //
@@ -438,6 +479,7 @@ uintptr_t OLISP_read(OLISP_state *state){
         reader_config.dispatch_table = dispatch_table;
         config_ptr = EBM_allocate_pointer_box_CA((uintptr_t)&reader_config,state->allocator,state->allocator_env);
     }
-    OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,config_ptr);
+    uintptr_t res = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,read_table,config_ptr);
+    return res;
 }
 
