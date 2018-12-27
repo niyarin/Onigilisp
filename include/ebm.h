@@ -117,6 +117,7 @@ uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t ob
 //
 
 uintptr_t EBM_allocate_symbol_CA(uint32_t *symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
+uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 
 //
 //POINTER BOX OPERATIONS
