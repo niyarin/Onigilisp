@@ -524,7 +524,11 @@ uintptr_t EBM_newline(uintptr_t port){
 
 uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
     if (EBM_IS_PAIR_CR(object)){
-        
+        EBM_write_char_CA('(',port);
+        EBM_write_simple(EBM_CAR(object),port);
+        EBM_write_cstring_CA(" . ",port);
+        EBM_write_simple(EBM_CDR(object),port);
+        EBM_write_char_CA(')',port);
     }else if (EBM_IS_RECORD_CR(object)){
         
     }else{
@@ -534,6 +538,9 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
                 return EBM_UNDEF;
             case EBM_FALSE:
                 EBM_write_cstring_CA("#f",port);
+                return EBM_UNDEF;
+            case EBM_NULL:
+                EBM_write_cstring_CA("'()",port);
                 return EBM_UNDEF;
         }
     }
