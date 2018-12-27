@@ -8,9 +8,16 @@
 void main_load_1script(char *filename){
     FILE *fp;
     if ((fp = fopen(filename,"r")) == NULL){
-        //TODO:OUTPUT ERROR MESSAGE
+        uintptr_t error_port =  EBM_frontend_allocate_output_file_port_CA(stderr,EBM_malloc_wrapper,EBM_NULL);
+        
+        EBM_write_cstring_CA("\033[31mError\033[39m",error_port);
+        EBM_write_cstring_CA(": No such file or directory. -- ",error_port);
+        EBM_write_cstring_CA(filename,error_port);
+        EBM_newline(error_port);
+
         exit(1);
     }
+
     EBM_ALLOCATOR allocator = EBM_malloc_wrapper;
     uintptr_t allocator_env = 0;
     uintptr_t port = EBM_frontend_allocate_input_file_port(fp,allocator,allocator_env);

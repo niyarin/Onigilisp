@@ -64,6 +64,7 @@ void EBM_free_wrapper(uintptr_t obj,uintptr_t env);
 //PAIR OPERATIONS
 //
 uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
+#define EBM_IS_PAIR_CR(object) (EBM_GET_TYPE(object)==EBM_TYPE_PAIR)
 #define EBM_CAR(p) (((uintptr_t*)(EBM_REMOVE_TYPE(p)))[0])
 #define EBM_CDR(p) (((uintptr_t*)(EBM_REMOVE_TYPE(p)))[1])
 #define EBM_PRIMITIVE_SET_CAR(p,o) ((((uintptr_t*)(EBM_REMOVE_TYPE(p)))[0]) = o)

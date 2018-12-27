@@ -483,3 +483,58 @@ uintptr_t OLISP_read(OLISP_state *state){
     return res;
 }
 
+//
+//write
+//
+
+uintptr_t EBM_write_char_CA(uint32_t c,uintptr_t port){
+    if (EBM_IS_OUTPUT_PORT_CR(port)){
+        if (EBM_IS_FILE_PORT_CR(port)){
+            FILE *fp = (FILE*)EBM_record_ref_CA(port,3);
+            unsigned char res[5];
+            EBM_u32_to_u8(c,res);
+            int i=0;
+            while(res[i]){
+                putc(res[i],fp);
+                i++;
+            }
+        }else if (EBM_IS_STRING_PORT_CR(port)){
+            //TODO:
+        }   
+    }
+    return EBM_UNDEF;
+}
+
+uintptr_t EBM_write_cstring_CA(char *cstring,uintptr_t port){
+    if (EBM_IS_OUTPUT_PORT_CR(port)){
+        int index = 0;
+        while (cstring[index]){
+            EBM_write_char_CA(cstring[index],port);
+            index++;
+        }
+    }
+}
+
+
+
+uintptr_t EBM_newline(uintptr_t port){
+    EBM_write_char_CA('\n',port);
+    return EBM_UNDEF;
+}
+
+uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
+    if (EBM_IS_PAIR_CR(object)){
+        
+    }else if (EBM_IS_RECORD_CR(object)){
+        
+    }else{
+        switch (object){
+            case EBM_TRUE:
+                EBM_write_cstring_CA("#t",port);
+                return EBM_UNDEF;
+            case EBM_FALSE:
+                EBM_write_cstring_CA("#f",port);
+                return EBM_UNDEF;
+        }
+    }
+}
