@@ -15,6 +15,7 @@ uintptr_t EBM_allocate_symbol_CA(uint32_t *symbol,EBM_ALLOCATOR allocator,uintpt
     int i=0;
     while (symbol[i]){
         symbol_data[i] = symbol[i];
+        i++;
     }
     symbol_data[i] = 0;
     
@@ -38,6 +39,7 @@ uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocat
     int i=0;
     while (symbol[i]){
         symbol_data[i] = symbol[i];
+        i++;
     }
     symbol_data[i] = 0;
     
