@@ -246,7 +246,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state);
 
 uintptr_t OLISP_read_function_read_list(OLISP_state *state){
     printf("::::::::::::::::::::[read list]\n");
-    if (state->arg_size == 3){
+    if (state->arg_size >= 3){
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
@@ -276,24 +276,27 @@ uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
 
 
 uintptr_t OLISP_read_function_read_space(OLISP_state *state){
-    if (state->arg_size == 3){
+    if (state->arg_size >= 3){
         printf("::::::::::::::::::::::::::::::::::::[SP]\n");
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
+
+        uintptr_t delim_cc = state->args1[3];
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
-        return OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+        return OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,delim_cc);
     }
 }
 
 uintptr_t OLISP_read_function_read_newline(OLISP_state *state){//TODO:あとで行番号の追加
-    if (state->arg_size == 3){
+    if (state->arg_size >= 3){
         printf("::::::::::::::::::::::::::::::::::::[NEWLINE]\n");
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
+        uintptr_t delim_cc = state->args1[3];
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
-        return OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+        return OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,delim_cc);
     }
 }
 
@@ -303,6 +306,8 @@ uintptr_t OLISP_read_function_read_quote(OLISP_state *state){
     uintptr_t port = state->args1[0];
     uintptr_t target_ebm_c = state->args1[1];
     uintptr_t reader_config_ptr = state->args1[2];
+    uintptr_t delim_cc = state->args1[3];
+
     OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
 
     uintptr_t object = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
@@ -352,7 +357,7 @@ uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
 
         //TODO:check
 
-        
+        printf("TRUE READ END\n");
         return EBM_TRUE;
     }else if (cc2 == 'f'){
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
@@ -427,9 +432,11 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
         size_t token_length = 0;
         while (1){
             uint32_t cc = EBM_read_char_CR(port);
+            if (cc == EOF||cc == 0){
+                return EBM_EOF;
+            }
             printf("%c\n",cc);
             uintptr_t read_function_apair = EBM_char_table_ref_CA(character_table,cc);
-
             if (read_function_apair != EBM_FALSE){
                 uintptr_t config_ptr = state->args1[2];
                 if (token_length != 0){
@@ -444,9 +451,18 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
                     }
                 }
                 uintptr_t read_function = EBM_CDR(read_function_apair);
-                return OLISP_cfun_call(state,OLISP_fun_call,4,read_function,port, EBM_allocate_character_CA(cc),config_ptr);
+                return OLISP_cfun_call(state,OLISP_fun_call,5,read_function,port, EBM_allocate_character_CA(cc),config_ptr,EBM_allocate_character_CA(delim_cc));
             }
-            break;
+
+            {
+                if (token_length > token_max_length){
+                    token_max_length+=8;
+                    token_string = (uint32_t*)realloc((void*)token_string,sizeof(uint32_t)*token_max_length);
+                }
+                token_string[token_length] = cc;
+                token_length++;
+            }
+
         }
     }
 }
@@ -530,7 +546,17 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
         EBM_write_simple(EBM_CDR(object),port);
         EBM_write_char_CA(')',port);
     }else if (EBM_IS_RECORD_CR(object)){
-        
+        if (EBM_IS_SYMBOL_CR(object)){
+            //TODO:縦棒必要なケースの判定
+
+            uint32_t *symbol_data = (uint32_t*)EBM_record_third(object);
+            int i=0;
+            while (symbol_data[i]){
+                EBM_write_char_CA(symbol_data[i],port);
+                i++;
+            }
+            return EBM_UNDEF;
+        }
     }else{
         switch (object){
             case EBM_TRUE:
