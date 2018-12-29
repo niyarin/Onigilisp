@@ -57,6 +57,14 @@
 //OBJECT MANAGER
 //
 typedef uintptr_t (*EBM_ALLOCATOR)(size_t,uintptr_t);
+typedef uintptr_t (*EBM_GC)(uintptr_t);
+typedef uintptr_t (*EBM_FREE)(uintptr_t ,uintptr_t);
+typedef uintptr_t (*EBM_WRITE_BARRIER)(uintptr_t,uintptr_t,uintptr_t);
+typedef uintptr_t (*EBM_REALLOC)(size_t,uintptr_t,uintptr_t);
+typedef uintptr_t (*EBM_GC_STEP)(uintptr_t);
+typedef uintptr_t (*EBM_GC_ADD_ROOT)(uintptr_t,uintptr_t);
+
+
 uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env);
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env);
 
