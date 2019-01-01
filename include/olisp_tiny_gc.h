@@ -9,4 +9,10 @@ typedef struct _olisp_tiny_gc_env{
     uintptr_t env;
 }olisp_tiny_gc_env;
 
+
+
+uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env);
+
+uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env);
+
 #endif

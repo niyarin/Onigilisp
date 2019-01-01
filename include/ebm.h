@@ -135,6 +135,7 @@ uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocat
 //
 uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uintptr_t env);
 #define EBM_pointer_box_ref_CR(pointer_box) EBM_record_ref_CA(pointer_box,1)
+uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr);
 
 //
 //OPTIMIZATION MACROS FOR C　

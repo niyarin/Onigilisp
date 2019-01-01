@@ -89,3 +89,9 @@ uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uint
     EBM_record_primitive_set_CA(res,1,val);
     return res;
 }
+
+uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr){
+    EBM_record_primitive_set_CA(pointer_box,1,ptr);
+    return EBM_UNDEF;
+}
+
