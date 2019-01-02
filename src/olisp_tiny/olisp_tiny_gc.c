@@ -25,8 +25,10 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
 
        uintptr_t pool = EBM_vector_ref_CA(env->env,(sz + 2) - 1);
 
+
        if (EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS) != EBM_NULL){
             //TODO:            
+            exit(1);
        }
     
        if ( EBM_pointer_box_ref_CR( EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END)) == EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT))){
@@ -34,9 +36,9 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
             exit(1);
        }
 
-        uintptr_t res = EBM_FX_NUMBER_TO_C_INTEGER_CR( EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT)));
+        uintptr_t res = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT));
 
-        EBM_pointer_box_set(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT),EBM_allocate_FX_NUMBER_CA(res + sizeof(uintptr_t) * sz));
+        EBM_pointer_box_set(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT),res + sizeof(uintptr_t) * sz);
         return res;
 
   }else{
@@ -108,6 +110,9 @@ uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)parent_allocator(sizeof(olisp_tiny_gc_env),parent_allocator_env);
 
     env->parent_env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(parent_allocator_env);
+
+
+    env->env = EBM_allocate_olisp_tiny_gc_arena(parent_allocator,parent_allocator_env);
 
     return EBM_allocate_pointer_box_CA((uintptr_t)env,parent_allocator,parent_allocator_env);
 }
