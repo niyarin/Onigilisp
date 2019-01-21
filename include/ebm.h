@@ -141,6 +141,12 @@ uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uint
 uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr);
 
 //
+//RECORD POINTER OPERATIONS
+//
+uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t free_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env);
+
+
+//
 //OPTIMIZATION MACROS FOR C　
 //
 #ifndef __GNUC__
