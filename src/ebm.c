@@ -28,6 +28,17 @@ uintptr_t EBM_allocate_record_CA(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t
     return EBM_ADD_TYPE(res,EBM_TYPE_RECORD);
 }
 
+uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t free_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env){
+    uintptr_t res = EBM_allocate_record_CA(5);
+    EBM_record_primitive_set_CA(res,0,EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER);
+    EBM_record_primitive_set_CA(res,1,EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER);
+    EBM_record_primitive_set_CA(res,2,gc_flag);
+    EBM_record_primitive_set_CA(res,3, EBM_allocate_FX_NUMBER_CA(left));
+    EBM_record_primitive_set_CA(res,4, EBM_allocate_FX_NUMBER_CA(right));
+    return res;
+}
+
+
 uintptr_t EBM_vector_re_allocate_CA(uintptr_t vector,uintptr_t new_size,uintptr_t else_fill,EBM_ALLOCATOR allocator,uintptr_t env){
     //一度re_allocateしたオブジェクトは再度re_allocateされる可能性は高そう
     //allocatorを特殊化したりできるかも
@@ -57,6 +68,12 @@ uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p)
     return EBM_UNDEF;
 }
 
+
+uintptr_t EBM_record_set(uintptr_t record,size_t index,uintptr_t allocator_env){
+    //TODO:あとで実装(ライトバリア実装後)
+}
+
+
 uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index){
     uintptr_t* record_v = (uintptr_t*)EBM_REMOVE_TYPE(record);
     return (uintptr_t)record_v[index+1];
@@ -80,7 +97,6 @@ uintptr_t EBM_allocate_vector_CA(size_t size,EBM_ALLOCATOR allocator,uintptr_t e
 uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t object){
     EBM_record_primitive_set_CA(vector,index+2,object);
 }
-
 
 
 uintptr_t EBM_allocate_pointer_box_CA(uintptr_t val,EBM_ALLOCATOR allocator,uintptr_t env){

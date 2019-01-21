@@ -98,6 +98,8 @@ uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr
 #define EBM_BUILT_IN_RECORD_TYPE_SYMBOL EBM_allocate_FX_NUMBER_CA(1)
 #define EBM_BUILT_IN_RECORD_TYPE_PORT EBM_allocate_FX_NUMBER_CA(5)
 #define EBM_BUILT_IN_RECORD_TYPE_VECTOR EBM_allocate_FX_NUMBER_CA(2)
+#define EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE EBM_allocate_FX_NUMBER_CA(3)
+#define EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER EBM_allocate_FX_NUMBER_CA(29)
 #define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
 #define EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION EBM_allocate_FX_NUMBER_CA(52)
 //
@@ -105,6 +107,7 @@ uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr
 //
 uintptr_t EBM_allocate_record_CA(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p);
+uintptr_t EBM_record_set(uintptr_t record,size_t index,uintptr_t allocator_env);
 uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index);
 #define EBM_IS_RECORD_CR(object) (EBM_GET_TYPE(object) == EBM_TYPE_RECORD)
 #define EBM_record_length_CR(object) (((uintptr_t*)EBM_REMOVE_TYPE(object))[0]) 
