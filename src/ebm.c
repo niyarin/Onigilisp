@@ -69,7 +69,7 @@ uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p)
 }
 
 
-uintptr_t EBM_record_set(uintptr_t record,size_t index,uintptr_t allocator_env){
+uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t allocator_env){
     //TODO:あとで実装(ライトバリア実装後)
 }
 
