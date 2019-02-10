@@ -28,8 +28,8 @@ uintptr_t EBM_allocate_record_CA(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t
     return EBM_ADD_TYPE(res,EBM_TYPE_RECORD);
 }
 
-uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t free_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env){
-    uintptr_t res = EBM_allocate_record_CA(6);
+uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t gc_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env){
+    uintptr_t res = EBM_allocate_record_CA(6,allocator,allocate_env);
     EBM_record_primitive_set_CA(res,0,EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER);
     EBM_record_primitive_set_CA(res,1,EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER);
     EBM_record_primitive_set_CA(res,2,record);
@@ -111,4 +111,3 @@ uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr){
     EBM_record_primitive_set_CA(pointer_box,1,ptr);
     return EBM_UNDEF;
 }
-
