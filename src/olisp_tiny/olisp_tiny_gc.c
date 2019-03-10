@@ -10,6 +10,7 @@
 #define OLISP_TINY_GC_PTR_START 3
 #define OLISP_TINY_GC_PTR_CURRENT 4
 #define OLISP_TINY_GC_PTR_END 5
+#define OLISP_TINY_GC_NEXT_POOL 6
 
 
 
@@ -54,9 +55,12 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
 
 }
 
-
+/**
+ * Allocate a gc pool.
+ * gc pool = #(heap mark free-ptr heap-start heap-end current-heap-position)
+ */
 static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env){
-    uintptr_t res = EBM_allocate_vector_CA(6,parent_allocator,parent_allocator_env);
+    uintptr_t res = EBM_allocate_vector_CA(7,parent_allocator,parent_allocator_env);
     
     uintptr_t allocated_ptr = parent_allocator(sizeof(uintptr_t) * size,parent_allocator_env);
 
@@ -65,19 +69,20 @@ static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR pa
     EBM_vector_primitive_set_CA(res,0,obj_ptr);
     
     //allocate mark
+    //mark 2bit 
     uintptr_t mark_ptr = EBM_allocate_pointer_box_CA(parent_allocator((1 + size/16) * sizeof(uint32_t),parent_allocator_env),parent_allocator,parent_allocator_env);
     EBM_vector_primitive_set_CA(res,1,mark_ptr);
-
-
 
     //allocate free ptr
     EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_FREE_PTRS,EBM_NULL);
 
     EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_PTR_START,EBM_allocate_pointer_box_CA(allocated_ptr,parent_allocator,parent_allocator_env));
     
-    EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_PTR_END,EBM_allocate_pointer_box_CA(allocated_ptr + sizeof(uintptr_t) * EBM_POOL_SIZE,parent_allocator,parent_allocator_env));
+    EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_PTR_END,EBM_allocate_pointer_box_CA(allocated_ptr + sizeof(uintptr_t) * EBM_POOL_SIZE * size,parent_allocator,parent_allocator_env));
 
     EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_PTR_CURRENT,EBM_allocate_pointer_box_CA(allocated_ptr,parent_allocator,parent_allocator_env));
+
+    EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_NEXT_POOL,EBM_NULL);
     return res;
 }
 
