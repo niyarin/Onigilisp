@@ -4,36 +4,37 @@
 #define EBM_POOL_SIZE 128
 #define EBM_NUMBER_OF_POOL 16
 
-
-
 #define OLISP_TINY_GC_FREE_PTRS 2
 #define OLISP_TINY_GC_PTR_START 3
 #define OLISP_TINY_GC_PTR_CURRENT 4
 #define OLISP_TINY_GC_PTR_END 5
 #define OLISP_TINY_GC_NEXT_POOL 6
 
+#define OLISP_TINY_GC_ARENA_POOL_START 3
 
+#define OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE 128
+
+//TODO:ぴったりサイズのとき1サイズ大きくなるのを修正する
+static uintptr_t EBM_olisp_gc_count_valid_bit(uintptr_t original_ptr){
+    return (original_ptr+(1<<EBM_CONFIG_POINTER_INFORMATION_SIZE))>>EBM_CONFIG_POINTER_INFORMATION_SIZE;
+} 
 
 uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
    olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
 
 
    if (size < sizeof(uintptr_t) * EBM_NUMBER_OF_POOL){
-       if (size & EBM_POINTER_INFORMATION_BITS){
-           size += (1<<EBM_CONFIG_POINTER_INFORMATION_SIZE);
-       }
-       uintptr_t sz = size>>EBM_CONFIG_POINTER_INFORMATION_SIZE;
-
-       uintptr_t pool = EBM_vector_ref_CA(env->env,(sz + 2) - 1);
+       uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
+       uintptr_t pool = EBM_vector_ref_CA(env->arena,(sz + OLISP_TINY_GC_ARENA_POOL_START ) - 1);
 
 
        if (EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS) != EBM_NULL){
-            //TODO:            
-            exit(1);
+           //TODO:Return a freed ptr if pool has.
+           exit(1);
        }
     
        if ( EBM_pointer_box_ref_CR( EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END)) == EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT))){
-            //next
+            //TODO:Allocate a next pool.
             exit(1);
        }
 
@@ -43,16 +44,16 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
         return res;
 
   }else{
-       //TODO:
-        //free size
-        printf("FREE SIZE\n");
+        //TODO:
         
-        exit(1);
+      olisp_tiny_gc_env *parent_env = env->parent_env;
+        uintptr_t res = parent_env->allocator(size,parent_env->arena);
+        uintptr_t current_free_ptr_size =  EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(env->arena,2));
+
+        printf("FREE SIZE[%ld]\n",size);
+
+        return res;
    }
-
-
-
-
 }
 
 /**
@@ -108,16 +109,14 @@ static uintptr_t EBM_allocate_olisp_tiny_gc_arena(EBM_ALLOCATOR parent_allocator
     return res;
 }
 
-
-
- 
 uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env){
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)parent_allocator(sizeof(olisp_tiny_gc_env),parent_allocator_env);
 
     env->parent_env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(parent_allocator_env);
 
+    env->arena = EBM_allocate_olisp_tiny_gc_arena(parent_allocator,parent_allocator_env);
 
-    env->env = EBM_allocate_olisp_tiny_gc_arena(parent_allocator,parent_allocator_env);
+    env->root = EBM_NULL;
 
     return EBM_allocate_pointer_box_CA((uintptr_t)env,parent_allocator,parent_allocator_env);
 }
