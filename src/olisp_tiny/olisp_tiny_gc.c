@@ -52,7 +52,7 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
         
         
         char* free_size_mark = (char*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(env->arena,3));
-        free_size_mark[current_free_ptr_size] = 0b01;
+        free_size_mark[current_free_ptr_size] = 0b00;
 
         //update free ptr size
         EBM_vector_primitive_set_CA(env->arena,2,EBM_allocate_FX_NUMBER_CA(current_free_ptr_size + 1));
@@ -61,6 +61,8 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
         return res;
    }
 }
+
+
 
 /**
  * Allocate a gc pool.
@@ -155,6 +157,7 @@ uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_
     return EBM_allocate_pointer_box_CA((uintptr_t)env,parent_allocator,parent_allocator_env);
 }
 
+
 uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env_ptr,int counter_for_old_arenas){
     //For only current generation gc???
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
@@ -162,7 +165,15 @@ uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env
    uintptr_t arena = env->arena;
    while (counter_for_old_arenas && !EBM_vector_ref_CA(arena,4)!=EBM_NULL){
        if (size == 0){
-            //TODO:
+           int i;
+           for (i=0;i<EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(arena,2));i++){
+               if (EBM_pointer_box_ref_CR(EBM_vector_ref_CA(EBM_vector_ref_CA(arena,1),i)) == ptr){
+                    char* mark = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(arena,3));
+                    mark[i] |= 0b01;
+                    break;
+               }
+           }
+
        }else{
            uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
            uintptr_t pool = EBM_vector_ref_CA(env->arena,(sz + OLISP_TINY_GC_ARENA_POOL_START ) - 1);
