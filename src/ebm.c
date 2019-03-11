@@ -111,3 +111,21 @@ uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr){
     EBM_record_primitive_set_CA(pointer_box,1,ptr);
     return EBM_UNDEF;
 }
+
+
+uintptr_t EBM_object_heap_size_CR(uintptr_t object){
+    if (EBM_IS_RECORD_CR(object)){
+        switch(EBM_record_ref_CA(object,0)){
+            case EBM_BUILT_IN_RECORD_TYPE_SYMBOL:
+                return sizeof(uintptr_t) * 3;
+
+            case EBM_BUILT_IN_RECORD_TYPE_VECTOR:
+                return sizeof(uintptr_t) * (EBM_vector_ref_CA(object,1)+2);
+            default:
+                break;
+        }
+    }else if (EBM_IS_PAIR_CR(object)){
+        return sizeof(uintptr_t) * 2;
+    }
+    return 0;
+}
