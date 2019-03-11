@@ -155,39 +155,42 @@ uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_
     return EBM_allocate_pointer_box_CA((uintptr_t)env,parent_allocator,parent_allocator_env);
 }
 
-uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env_ptr){
+uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env_ptr,int counter_for_old_arenas){
     //For only current generation gc???
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
 
    uintptr_t arena = env->arena;
+   while (counter_for_old_arenas && !EBM_vector_ref_CA(arena,4)!=EBM_NULL){
+       if (size == 0){
+            //TODO:
+       }else{
+           uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
+           uintptr_t pool = EBM_vector_ref_CA(env->arena,(sz + OLISP_TINY_GC_ARENA_POOL_START ) - 1);
+            while (pool != EBM_NULL){
+                uintptr_t heap_start_ptr = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START ));
 
-   if (size == 0){
-        //TODO:
-   }else{
-       uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
-       uintptr_t pool = EBM_vector_ref_CA(env->arena,(sz + OLISP_TINY_GC_ARENA_POOL_START ) - 1);
-        while (pool != EBM_NULL){
-            uintptr_t heap_start_ptr = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START ));
+               if (heap_start_ptr <= ptr && ptr < EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END))){
+                   uintptr_t size_on_pool = (( 1<<EBM_CONFIG_POINTER_INFORMATION_SIZE) *sz);
+                   uint32_t *mark_ptr = (uint32_t*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,1));
+                    int mark_position1 = (ptr - heap_start_ptr)/(16 * size_on_pool);
+                    int mark_position2 = (ptr - (heap_start_ptr + mark_position1 * size_on_pool * 16)) / size_on_pool;
 
-           if (heap_start_ptr <= ptr && ptr < EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END))){
-               uintptr_t size_on_pool = (( 1<<EBM_CONFIG_POINTER_INFORMATION_SIZE) *sz);
-               uint32_t *mark_ptr = (uint32_t*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,1));
-                int mark_position1 = (ptr - heap_start_ptr)/(16 * size_on_pool);
-                int mark_position2 = (ptr - (heap_start_ptr + mark_position1 * size_on_pool * 16)) / size_on_pool;
-
-                if (mark_ptr[mark_position1]>>(mark_position2*2)&0b01){
-                    //marked
-                    return 0;
-                }
+                    if (mark_ptr[mark_position1]>>(mark_position2*2)&0b01){
+                        //marked
+                        return 0;
+                    }
 
 
-                mark_ptr[mark_position1] = 
-                    mark_ptr[mark_position1]| 0b01<<(mark_position2*2);
-                return 1;
-                break;
+                    mark_ptr[mark_position1] = 
+                        mark_ptr[mark_position1]| 0b01<<(mark_position2*2);
+                    return 1;
+                    break;
+               }
+               pool = EBM_vector_ref_CA(pool,OLISP_TINY_GC_NEXT_POOL);
            }
-           pool = EBM_vector_ref_CA(pool,OLISP_TINY_GC_NEXT_POOL);
        }
+       arena = EBM_vector_ref_CA(arena,4);
+       counter_for_old_arenas--;
    }
 }
 
