@@ -10,7 +10,7 @@
 #define OLISP_TINY_GC_PTR_END 5
 #define OLISP_TINY_GC_NEXT_POOL 6
 
-#define OLISP_TINY_GC_ARENA_POOL_START 3
+#define OLISP_TINY_GC_ARENA_POOL_START 5
 
 #define OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE 128
 
@@ -44,14 +44,20 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
         return res;
 
   }else{
-        //TODO:
-        
-      olisp_tiny_gc_env *parent_env = env->parent_env;
+        olisp_tiny_gc_env *parent_env = env->parent_env;
         uintptr_t res = parent_env->allocator(size,parent_env->arena);
         uintptr_t current_free_ptr_size =  EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(env->arena,2));
 
-        printf("FREE SIZE[%ld]\n",size);
+        uintptr_t pointer_box = EBM_vector_ref_CA(EBM_vector_ref_CA(env->arena,1),current_free_ptr_size);
+        
+        
+        char* free_size_mark = (char*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(env->arena,3));
+        free_size_mark[current_free_ptr_size] = 0b01;
 
+        //update free ptr size
+        EBM_vector_primitive_set_CA(env->arena,2,EBM_allocate_FX_NUMBER_CA(current_free_ptr_size + 1));
+
+        EBM_pointer_box_set(pointer_box,res);
         return res;
    }
 }
@@ -88,29 +94,57 @@ static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR pa
 }
 
 
+/**
+ * Allocate an arena object.
+ * arena object = #( write-barrier free-size-pool free-size-pool-size size1-pool size2-pool ... sizeN-pool)
+ *
+ */
 static uintptr_t EBM_allocate_olisp_tiny_gc_arena(EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env){
-    uintptr_t res = EBM_allocate_vector_CA(2 + EBM_NUMBER_OF_POOL,parent_allocator,parent_allocator_env);
+    uintptr_t res = EBM_allocate_vector_CA(OLISP_TINY_GC_ARENA_POOL_START  + EBM_NUMBER_OF_POOL,parent_allocator,parent_allocator_env);
     
-    {//allocate write barier space
+    {//allocate write barrier space
         EBM_vector_primitive_set_CA(res,0,EBM_NULL);
     }
 
     {//allocate free size pool
-        EBM_vector_primitive_set_CA(res,1,EBM_NULL);
+        uintptr_t free_size_pool = EBM_allocate_vector_CA(OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE,parent_allocator,parent_allocator_env);
+        EBM_vector_primitive_set_CA(res,1,free_size_pool);
+        int i;
+        for (i=0;i<OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE;i++){
+            EBM_vector_primitive_set_CA(free_size_pool,i,EBM_allocate_pointer_box_CA(0,parent_allocator,parent_allocator_env));
+        }
     }
+
+    {//free size pool length
+        EBM_vector_primitive_set_CA(res,2,EBM_allocate_FX_NUMBER_CA(0));
+    }
+
+    {//marks for free size pool.
+        char* free_size_mark = (char*)parent_allocator(OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE,parent_allocator_env);
+        EBM_vector_primitive_set_CA(res,3,EBM_allocate_pointer_box_CA(free_size_mark,parent_allocator,parent_allocator_env));
+    }
+
+    {//set old generation.
+        EBM_vector_primitive_set_CA(res,4,EBM_NULL);
+    }
+
+
 
     {//allocate static size pool
         int i;
         for (i=0;i<EBM_NUMBER_OF_POOL;i++){
             uintptr_t pool = EBM_allocate_olisp_tiny_gc_pool(i+1,parent_allocator,parent_allocator_env);
-            EBM_vector_primitive_set_CA(res,i+2,pool);
+            EBM_vector_primitive_set_CA(res,i+OLISP_TINY_GC_ARENA_POOL_START ,pool);
         }
     }
     return res;
 }
 
+
+
 uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env){
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)parent_allocator(sizeof(olisp_tiny_gc_env),parent_allocator_env);
+
 
     env->parent_env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(parent_allocator_env);
 
