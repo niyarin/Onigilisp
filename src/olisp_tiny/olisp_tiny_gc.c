@@ -14,10 +14,9 @@
 
 #define OLISP_TINY_GC_INITIAL_FREE_PTRS_SIZE 128
 
-//TODO:ぴったりサイズのとき1サイズ大きくなるのを修正する
 static uintptr_t EBM_olisp_gc_count_valid_bit(uintptr_t original_ptr){
-    return (original_ptr+(1<<EBM_CONFIG_POINTER_INFORMATION_SIZE))>>EBM_CONFIG_POINTER_INFORMATION_SIZE;
-} 
+    return ((original_ptr-1)>>2)+1;
+}
 
 uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
    olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
