@@ -11,6 +11,8 @@
 #define EBM_CONFIG_SET_POINTER_INFORMATION 1
 #define EBM_CONFIG_POINTER_INFORMATION_SIZE 2
 
+#define EBM_SMALL_OBJECT_LENGTH 5
+
 //
 //BITS OPERATORS
 //
@@ -92,6 +94,7 @@ uintptr_t EBM_char_table_create_CA(size_t size,size_t start_index,EBM_ALLOCATOR 
 uintptr_t EBM_char_table_ref_CA(uintptr_t table,size_t cc);
 uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 
+
 //
 //RECORD TYPES
 //
@@ -102,6 +105,7 @@ uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr
 #define EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER EBM_allocate_FX_NUMBER_CA(29)
 #define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
 #define EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION EBM_allocate_FX_NUMBER_CA(52)
+
 //
 //RECORD OPERATIONS
 //
@@ -143,7 +147,18 @@ uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr);
 //
 //RECORD POINTER OPERATIONS
 //
-uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t free_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env);
+uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t right,uintptr_t gc_flag,EBM_ALLOCATOR allocator,uintptr_t allocate_env);
+#define EBM_record_pointer_range_ref_record(record_pointer)  (EBM_record_ref_CA(record_pointer,2))
+#define EBM_record_pointer_range_ref_left_CR(record_pointer)  (EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_ref_CA(record_pointer,4)))
+#define EBM_record_pointer_range_set_left(record_pointer,fxnum)  (EBM_record_primitive_set_CA(record_pointer,4,fxnum))
+#define EBM_record_pointer_range_ref_right_CR(record_pointer)  (EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_ref_CA(record_pointer,5)))
+#define EBM_record_pointer_range_set_right(record_pointer,fxnum)  (EBM_record_primitive_set_CA(record_pointer,5,fxnum))
+
+
+//
+// OTHERS
+//
+uintptr_t EBM_object_heap_size_CR(uintptr_t object);
 
 
 //
