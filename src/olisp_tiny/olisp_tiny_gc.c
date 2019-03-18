@@ -9,6 +9,7 @@
 #define OLISP_TINY_GC_PTR_CURRENT 4
 #define OLISP_TINY_GC_PTR_END 5
 #define OLISP_TINY_GC_NEXT_POOL 6
+#define OLISP_TINY_GC_POOL_TARGET_SIZE 7
 
 #define OLISP_TINY_GC_ARENA_POOL_START 5
 
@@ -65,12 +66,12 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
 
 /**
  * Allocate a gc pool.
- * gc pool = #(heap mark free-ptr heap-start heap-end current-heap-position)
+ * gc pool = #(heap mark free-ptr heap-start heap-end current-heap-position target_size)
  */
 static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env){
-    uintptr_t res = EBM_allocate_vector_CA(7,parent_allocator,parent_allocator_env);
+    uintptr_t res = EBM_allocate_vector_CA(8,parent_allocator,parent_allocator_env);
     
-    uintptr_t allocated_ptr = parent_allocator(sizeof(uintptr_t) * size,parent_allocator_env);
+    uintptr_t allocated_ptr = parent_allocator(sizeof(uintptr_t) * size * EBM_POOL_SIZE,parent_allocator_env);
 
     //allocate objects
     uintptr_t obj_ptr = EBM_allocate_pointer_box_CA(allocated_ptr,parent_allocator,parent_allocator_env);
@@ -91,6 +92,7 @@ static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR pa
     EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_PTR_CURRENT,EBM_allocate_pointer_box_CA(allocated_ptr,parent_allocator,parent_allocator_env));
 
     EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_NEXT_POOL,EBM_NULL);
+    EBM_vector_primitive_set_CA(res,OLISP_TINY_GC_POOL_TARGET_SIZE,EBM_allocate_FX_NUMBER_CA(size));
     return res;
 }
 
@@ -167,6 +169,20 @@ static uintptr_t EBM_olisp_tiny_gc_search_free_size_index(uintptr_t ptr,uintptr_
     return -1;
 }
 
+static uintptr_t EBM_olisp_gc_search_all_static_size_pools(uintptr_t ptr,uintptr_t arena){
+    int i;
+    for (i= OLISP_TINY_GC_ARENA_POOL_START ;i<EBM_vector_length_CR(arena);i++){
+        uintptr_t pool = EBM_vector_ref_CA(arena,i);
+        while (pool != EBM_NULL){
+           if ( EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START )) <= ptr && ptr < EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END))){
+               return pool;
+           }
+           pool = EBM_vector_ref_CA(pool,OLISP_TINY_GC_NEXT_POOL);
+        }
+    }
+    return EBM_NULL;
+}
+
 
 uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env_ptr,int counter_for_old_arenas){
     //For only current generation gc???
@@ -226,27 +242,32 @@ static void EBM_olisp_tiny_gc_push_free_ptr(uintptr_t ptr,uintptr_t pool){
 
 uintptr_t EBM_olisp_tiny_gc_free(uintptr_t object,uintptr_t env_ptr){
 
-    olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
+   olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
 
-    uintptr_t ptr = EBM_REMOVE_TYPE(object);
-    printf("!!\n");
+   uintptr_t ptr = EBM_REMOVE_TYPE(object);
    uintptr_t arena = env->arena;
+   uintptr_t size = EBM_object_heap_size_CR(object);
    while (arena!=EBM_NULL){
-        uintptr_t size = EBM_object_heap_size_CR(object);
         if (size == 0){
-            uintptr_t free_pool_index =  EBM_olisp_tiny_gc_search_free_size_index(ptr,arena);
 
+            uintptr_t free_pool_index =  EBM_olisp_tiny_gc_search_free_size_index(ptr,arena);
             if (free_pool_index != -1){
                 //TODO:つめる?(別のタイミングでまとめてやる)
                 uintptr_t pointer_box = EBM_vector_ref_CA(EBM_vector_ref_CA(arena,1),free_pool_index);
 
                 void* target_ptr = (void*)EBM_pointer_box_ref_CR(pointer_box);
                 free(target_ptr);
-                EBM_pointer_box_set(pointer_box,NULL);
+                EBM_pointer_box_set(pointer_box,0);
                 return EBM_TRUE;
             }
 
-            //TODO:
+            uintptr_t pool = EBM_olisp_gc_search_all_static_size_pools(ptr,arena);
+            uintptr_t pool_target_size = EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_POOL_TARGET_SIZE)) * sizeof(uintptr_t);
+            if (pool != EBM_NULL){
+
+                //TODO:
+            }
+
         }else{
            uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
            if (sz < EBM_NUMBER_OF_POOL){
@@ -267,5 +288,4 @@ uintptr_t EBM_olisp_tiny_gc_free(uintptr_t object,uintptr_t env_ptr){
        arena = EBM_vector_ref_CA(arena,4);
    }
 }
-
 
