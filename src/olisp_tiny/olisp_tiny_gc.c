@@ -234,8 +234,12 @@ uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env
 
 static void EBM_olisp_tiny_gc_push_free_ptr(uintptr_t ptr,uintptr_t pool){
     ptr = EBM_ADD_TYPE(ptr,EBM_TYPE_PAIR);
+
+    EBM_PRIMITIVE_SET_CAR(ptr,
+        EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS));
+
     //TODO:全くprimitiveではない。あとで直す
-    EBM_vector_primitive_set_CA(pool,EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS),OLISP_TINY_GC_FREE_PTRS);
+    EBM_vector_primitive_set_CA(pool,OLISP_TINY_GC_FREE_PTRS,ptr);
     
 }
 
@@ -263,11 +267,18 @@ uintptr_t EBM_olisp_tiny_gc_free(uintptr_t object,uintptr_t env_ptr){
 
             uintptr_t pool = EBM_olisp_gc_search_all_static_size_pools(ptr,arena);
             uintptr_t pool_target_size = EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_POOL_TARGET_SIZE)) * sizeof(uintptr_t);
+
             if (pool != EBM_NULL){
+                uint32_t *mark_ptr = (uint32_t*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,1));
 
-                //TODO:
+                uintptr_t heap_start_ptr = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START ));
+                int mark_position1 = (ptr - heap_start_ptr)/(16 * pool_target_size);
+
+                int mark_position2 = (ptr - (heap_start_ptr + mark_position1 * pool_target_size * 16)) / pool_target_size;
+                mark_ptr[mark_position1] = 
+                            mark_ptr[mark_position1]& (~(0b11<<(mark_position2*2)));
+                EBM_olisp_tiny_gc_push_free_ptr(ptr,pool);
             }
-
         }else{
            uintptr_t sz = EBM_olisp_gc_count_valid_bit(size);
            if (sz < EBM_NUMBER_OF_POOL){
