@@ -70,8 +70,11 @@ uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p)
 }
 
 
-uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t allocator_env){
-    //TODO:あとで実装(ライトバリア実装後)
+uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t target_object,EBM_WRITE_BARRIER write_barrier,uintptr_t allocator_env){
+    uintptr_t* record_v = (uintptr_t*)EBM_REMOVE_TYPE(record);
+    write_barrier(record,target_object,allocator_env);
+    record_v[index+1] = target_object;
+    return EBM_UNDEF;
 }
 
 

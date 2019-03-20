@@ -5,6 +5,7 @@
 #include<stddef.h>
 #include<stdlib.h>
 
+
 //
 //CONFIGS
 //
@@ -70,6 +71,13 @@ typedef uintptr_t (*EBM_GC_ADD_ROOT)(uintptr_t,uintptr_t);
 uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env);
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env);
 
+typedef struct {
+    EBM_ALLOCATOR allocator;
+    EBM_FREE free;
+    EBM_WRITE_BARRIER write_barrier;
+    uintptr_t env;
+}EBM_GC_INTERFACE;
+
 //
 //PAIR OPERATIONS
 //
@@ -111,7 +119,7 @@ uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr
 //
 uintptr_t EBM_allocate_record_CA(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p);
-uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t allocator_env);
+uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t target_object,EBM_WRITE_BARRIER write_barrier,uintptr_t allocator_env);
 uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index);
 #define EBM_IS_RECORD_CR(object) (EBM_GET_TYPE(object) == EBM_TYPE_RECORD)
 #define EBM_record_length_CR(object) (((uintptr_t*)EBM_REMOVE_TYPE(object))[0]) 
