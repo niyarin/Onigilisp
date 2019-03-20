@@ -31,8 +31,9 @@ uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env_ptr){
 
 
        if (EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS) != EBM_NULL){
-           //TODO:Return a freed ptr if pool has.
-           exit(1);
+           uintptr_t res = EBM_REMOVE_TYPE(EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS));
+           EBM_vector_primitive_set_CA(pool,OLISP_TINY_GC_FREE_PTRS,EBM_CAR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_FREE_PTRS)));
+           return res;
        }
     
        if ( EBM_pointer_box_ref_CR( EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END)) == EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT))){
