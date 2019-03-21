@@ -44,7 +44,7 @@ uintptr_t EBM_allocate_symbol_trie(EBM_ALLOCATOR allocator,uintptr_t allocator_e
     EBM_record_primitive_set_CA(res,6,EBM_NULL);
     
     EBM_record_primitive_set_CA(res,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE,EBM_char_table_create_CA(128,0,allocator,allocator_env));
-    EBM_record_primitive_set_CA(res,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE_SIZE,EBM_allocate_FX_NUMBER_CA(0));
+    EBM_record_primitive_set_CA(res,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE_SIZE,EBM_allocate_FX_NUMBER_CA(129));
     return res;
 }
 
@@ -57,8 +57,25 @@ uintptr_t EBM_trie_char_index(uintptr_t index,uintptr_t character_table){
     if (fx_index_apair){
        return EBM_CDR(fx_index_apair);
     }
-    
     return 0;
+}
+
+static uintptr_t EBM_trie_char_index_and_insert(uintptr_t index,uintptr_t character_table,uintptr_t symbol_trie,EBM_GC_INTERFACE *gc_interface){
+    if (index < 128){
+        return index+1;
+    }
+    
+    uintptr_t fx_index_apair = EBM_char_table_ref_CA(character_table,index);
+    if (fx_index_apair){
+       return EBM_CDR(fx_index_apair);
+    }
+
+    uintptr_t large_character_table_FX_size = EBM_record_ref_CA(symbol_trie,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE_SIZE);
+
+    EBM_char_table_set_CA( character_table, EBM_FX_NUMBER_TO_C_INTEGER_CR(large_character_table_FX_size), EBM_allocate_FX_NUMBER_CA(large_character_table_FX_size), gc_interface);
+
+    EBM_char_table_set_CA( character_table,index, EBM_FX_ADD(large_character_table_FX_size,EBM_allocate_FX_NUMBER_CA(1)),gc_interface);
+    return EBM_FX_NUMBER_TO_C_INTEGER_CR(large_character_table_FX_size);
 }
 
 uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol){
