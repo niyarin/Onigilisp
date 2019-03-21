@@ -133,6 +133,7 @@ uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index);
 uintptr_t EBM_allocate_vector_CA(size_t size,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_vector_re_allocate_CA(uintptr_t vector,uintptr_t new_size,uintptr_t else_fill,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t object);
+#define EBM_vector_set_CA(vector,index,object,write_barrier,allocator_env) EBM_record_set_CA(vector,index+2,object,write_barrier,allocator_env);
 #define EBM_vector_length_CR(vector) EBM_record_ref_CA(vector,1)
 #define EBM_vector_ref_CA(vector,index) EBM_record_ref_CA(vector,index + 2)
 
