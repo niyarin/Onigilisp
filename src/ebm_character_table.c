@@ -27,8 +27,18 @@ uintptr_t EBM_char_table_ref_CA(uintptr_t table,size_t cc){
     return EBM_FALSE;
 }
 
+//TODO:primitiveじゃない
 uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t index = (cc%(EBM_vector_length_CR(table)-1))+1;
     EBM_vector_primitive_set_CA(table,index,EBM_allocate_pair(EBM_allocate_pair(EBM_allocate_character_CA(cc),object,allocator,allocator_env),EBM_vector_ref_CA(table,index),allocator,allocator_env));
+    return EBM_UNDEF;
+}
+
+uintptr_t EBM_char_table_set_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM_GC_INTERFACE *gc_interface){
+    uintptr_t index = (cc%(EBM_vector_length_CR(table)-1))+1;
+    EBM_vector_set_CA(table,
+                      index,
+                      EBM_allocate_pair(EBM_allocate_pair(EBM_allocate_character_CA(cc),object,gc_interface->allocator,gc_interface->env),EBM_vector_ref_CA(table,index),gc_interface->allocator,gc_interface->env),
+                      gc_interface->write_barrier,gc_interface->env);
     return EBM_UNDEF;
 }
