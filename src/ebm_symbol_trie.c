@@ -86,8 +86,11 @@ uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol){
     uintptr_t *items = (uintptr_t*)EBM_record_ref_CA(trie,EBM_SYMBOL_TRIE_INDEX_ITEMS);
     uintptr_t index = 0;
     uintptr_t pos = 1;
+
+    uintptr_t char_table = EBM_record_ref_CA(trie,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE);
+
     do {
-        uintptr_t symbol_index = EBM_trie_char_index(symbol_data[index],0);
+        uintptr_t symbol_index = EBM_trie_char_index(symbol_data[index],char_table);
         if (symbol_index == 0){
             return EBM_UNDEF;
         }
@@ -104,5 +107,160 @@ uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol){
         return EBM_UNDEF;
     }else{
         return EBM_CAR(items[pos]);
+    }
+}
+
+uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface){
+    uintptr_t mem_size = EBM_record_ref_CA(trie,1);
+    uint16_t *base = (uint16_t*)EBM_record_ref_CA(trie,3);
+    uint16_t *check = (uint16_t*)EBM_record_ref_CA(trie,4);
+    uintptr_t *items = (uintptr_t*)EBM_record_ref_CA(trie,5);
+    uintptr_t char_table = EBM_record_ref_CA(trie,EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE);
+
+    uint32_t *symbol_data = (uint32_t*)EBM_record_ref_CA(symbol,2);
+
+    uintptr_t index = 0;
+    uintptr_t pos = 1;
+    uintptr_t already_inserted = 1;
+
+    do{
+        uintptr_t new_pos = base[pos] + EBM_trie_char_index_and_insert(symbol_data[index],char_table,trie,gc_interface);
+
+        if (new_pos >= mem_size){
+            //OVER FLOW
+            exit(1);
+        }
+
+        if (check[new_pos] == pos){
+            //すでに登録済み
+            pos = new_pos;
+        }else{
+            already_inserted = 0;
+            if (check[new_pos] == 0){
+                //new_posの先が未使用
+                check[new_pos] = (uint16_t)pos;
+                
+                int base_number = 1;
+                uintptr_t next_char_index = EBM_trie_char_index_and_insert(symbol_data[index+1],char_table,trie,gc_interface);//MEMO:次が末尾だと?
+
+                //search free index..
+                while (check[base_number + next_char_index] ){
+                    base_number++;
+                    if (base_number ==  mem_size){
+                        //TODO:
+                        exit(1);
+                    }
+                }
+                
+                base[new_pos] = base_number;
+                pos = new_pos;
+            }else{//conflict
+                int i;
+                uintptr_t next_char_index = EBM_trie_char_index_and_insert(symbol_data[index+1],char_table,trie,gc_interface);
+
+                uintptr_t current_char_index = EBM_trie_char_index_and_insert(symbol_data[index],char_table,trie,gc_interface);
+
+                //posから移動できる位置の集合を得る
+                uintptr_t same_bases = EBM_NULL;
+                for (i=mem_size-1;i>-1;i--){
+                    if (check[i] == pos){
+                        same_bases = EBM_allocate_pair(i,same_bases,gc_interface->allocator,gc_interface->env);//TODO:pair in c number
+                    }
+                }
+
+                //新しいbase[pos]を探す
+                char flag1 = 0;
+                uintptr_t new_base = 0;
+                for (new_base=1;new_base<mem_size;new_base++){
+                    uintptr_t cell = same_bases;
+                    char flag2 = 1;
+                    while (cell != EBM_NULL){
+                        if (check[EBM_CAR(cell) - base[pos] + new_base]){
+                            flag2 = 0;
+                            break;
+                        }
+                        cell = EBM_CDR(cell);
+                    }
+
+                    if (flag2){
+                        if (check[new_base + current_char_index]){
+                            flag2 = 0;
+                        } 
+                    }
+
+
+                    if (flag2){//base[pos] = new_baseにできる
+                        uintptr_t original_base_pos = base[pos];
+                        base[pos] = new_base;
+                        cell = same_bases;
+                        while (cell != EBM_NULL){
+                            uintptr_t org_index = EBM_CAR(cell);
+                            uintptr_t new_index = org_index - original_base_pos + new_base; 
+                            check[new_index] = pos;
+                            base[new_index] = base[org_index];
+                            //整合性
+                            int j;
+                            for (j=0;j<mem_size;j++){
+                                if (check[j] == org_index){
+                                    check[j] = new_index;
+                                }
+                            }
+                            
+                            {//free old index
+                                check[org_index] = 0;
+                                base[org_index] = 0;
+                            }
+
+                            cell = EBM_CDR(cell);
+                        }
+                        {
+                            new_pos = new_base + current_char_index;
+                            check[new_pos] = pos;
+                        }
+
+                        
+                        {
+                            int base_number = 1;
+                            //search free index..
+                            while (check[base_number + next_char_index]){
+                                base_number++;
+                                if (base_number ==  mem_size){
+                                    //TODO:
+                                    exit(1);
+                                }
+                            }
+                            base[new_pos] = base_number;
+                        }
+                        pos = new_pos;
+                        flag1 = 1;
+                        break;
+                    }
+                }
+                if (!flag1){//入れられる場所がなかった
+                    exit(1);
+                    //TODO:実装しよう
+                }
+
+            }
+        }
+
+        index++;
+    }while (symbol_data[index]);
+
+    if (!already_inserted || items[pos] == EBM_UNDEF){
+        uintptr_t item_pair = EBM_allocate_pair(symbol,EBM_record_ref_CA(trie,6),gc_interface->allocator,gc_interface->env);
+        EBM_record_set_CA(trie,6,item_pair,gc_interface->write_barrier,gc_interface->env);
+        items[pos] = EBM_allocate_pair(object,
+                                       EBM_allocate_pair(
+                                           item_pair,
+                                           pos<<3,
+                                           gc_interface->allocator,
+                                           gc_interface->env),
+                                       gc_interface->allocator,
+                                       gc_interface->env);
+    }else{
+        EBM_set_car(items[pos],
+                    object,
+                    gc_interface);
     }
 }
