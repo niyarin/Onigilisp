@@ -101,7 +101,7 @@ uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,
 uintptr_t EBM_char_table_create_CA(size_t size,size_t start_index,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 uintptr_t EBM_char_table_ref_CA(uintptr_t table,size_t cc);
 uintptr_t EBM_char_table_primitive_insert_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
-
+uintptr_t EBM_char_table_set_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
 
 //
 //RECORD TYPES
@@ -162,6 +162,13 @@ uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t
 #define EBM_record_pointer_range_set_left(record_pointer,fxnum)  (EBM_record_primitive_set_CA(record_pointer,4,fxnum))
 #define EBM_record_pointer_range_ref_right_CR(record_pointer)  (EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_ref_CA(record_pointer,5)))
 #define EBM_record_pointer_range_set_right(record_pointer,fxnum)  (EBM_record_primitive_set_CA(record_pointer,5,fxnum))
+
+//
+//SYMBOL TRIE OPERATIONS
+//
+uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol);
+uintptr_t EBM_allocate_symbol_trie(EBM_ALLOCATOR allocator,uintptr_t allocator_env);
+uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
 
 
 //
