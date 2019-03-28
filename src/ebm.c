@@ -17,6 +17,19 @@ uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,
     return EBM_ADD_TYPE(pair,EBM_TYPE_PAIR);
 }
 
+uintptr_t EBM_set_car(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface){
+    EBM_PRIMITIVE_SET_CAR(pair,object);
+    gc_interface->write_barrier(pair,object,gc_interface->env);
+    return EBM_UNDEF;
+}
+
+uintptr_t EBM_set_cdr(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface){
+    EBM_PRIMITIVE_SET_CDR(pair,object);
+    gc_interface->write_barrier(pair,object,gc_interface->env);
+    return EBM_UNDEF;
+}
+
+
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env){
     free((void*)EBM_REMOVE_TYPE(obj));
 }
@@ -83,8 +96,6 @@ uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index){
     return (uintptr_t)record_v[index+1];
 }
 
-
-
 uintptr_t EBM_allocate_vector_CA(size_t size,EBM_ALLOCATOR allocator,uintptr_t env){
     uintptr_t res = EBM_allocate_record_CA(size + 2,allocator,env);
     EBM_record_primitive_set_CA(res,
@@ -114,7 +125,6 @@ uintptr_t EBM_pointer_box_set(uintptr_t pointer_box,uintptr_t ptr){
     EBM_record_primitive_set_CA(pointer_box,1,ptr);
     return EBM_UNDEF;
 }
-
 
 uintptr_t EBM_object_heap_size_CR(uintptr_t object){
     if (EBM_IS_RECORD_CR(object)){
