@@ -89,6 +89,7 @@ uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,
 #define EBM_PRIMITIVE_SET_CDR(p,o) ((((uintptr_t*)(EBM_REMOVE_TYPE(p)))[1]) = o)
 uintptr_t EBM_set_car(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
 uintptr_t EBM_set_cdr(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
+uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t allocator_env, ...);
 
 #define EBM_CAAR(p) EBM_CAR(EBM_CAR(p))
 #define EBM_CADR(p) EBM_CAR(EBM_CDR(p))

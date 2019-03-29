@@ -1,4 +1,5 @@
 #include "ebm.h"
+#include <stdarg.h>
 
 uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env){
     void* res =  malloc(size);
@@ -29,6 +30,19 @@ uintptr_t EBM_set_cdr(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_inter
     return EBM_UNDEF;
 }
 
+uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t allocator_env, ...){
+    va_list ap;
+    va_start(ap,allocator_env);
+
+    uintptr_t res = EBM_NULL;
+    int i;
+    for (i=0;i<size;i++){
+        res = EBM_allocate_pair(va_arg(ap,uintptr_t),res,allocator,allocator_env);
+        printf("P:%ld\n",EBM_CAR(res));
+    }
+    va_end(ap);
+    return res;
+}
 
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env){
     free((void*)EBM_REMOVE_TYPE(obj));
