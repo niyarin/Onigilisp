@@ -1,6 +1,7 @@
 #include "olisp_cinterface.h"
 #include "ebm.h"
-
+#include<stdio.h>
+#include<stdlib.h>
 
 void OLISP_set_arg(OLISP_state *state,uintptr_t pos,uintptr_t arg){
     if (pos < OLISP_ARG1_SIZE){
@@ -60,4 +61,9 @@ uintptr_t OLISP_fun_call(OLISP_state *state){
         }
     }
     //TODO:未実装
+}
+
+void OLISP_simple_error(char *message){
+    fputs(message,stderr);
+    exit(1);
 }

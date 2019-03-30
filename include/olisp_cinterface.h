@@ -4,19 +4,11 @@
 #include "ebm.h"
 #include<stdarg.h>
 
-/*
-#define OLISP_ARG1_SIZE 7
-typedef struct {
-    EBM_ALLOCATOR allocator;
-    uintptr_t allocate_env;
-    uintptr_t arg_size;
-    uintptr_t args1[OLISP_ARG1_SIZE];
-    uintptr_t args2;
-    uintptr_t returns;
-    uintptr_t error_stack;
-    uintptr_t symbol_intern;
-}OLISP_state;
-*/
+#define OLISP_CINTERFACE_INSERT_TYPE_CHECK 1
+
+#define OLISP_CINTERFACE_TYPE_CHECK_BLOCK if (OLISP_CINTERFACE_INSERT_TYPE_CHECK)
+
+#define OLISP_CINTERFACE_TYPE_ERROR(message) OLISP_simple_error(message)
 
 #define OLISP_ARG1_SIZE 7
 typedef struct {
@@ -40,10 +32,6 @@ void OLISP_set_arg_size(OLISP_state *state,uintptr_t size);
 uintptr_t OLISP_create_function_for_ebm(OLISP_cfun cfun,EBM_ALLOCATOR  allocator,uintptr_t allocator_env);
 
 
+void OLISP_simple_error(char *message);
 
-/*
-OLISP_state* OLISP_allocate_state(EBM_ALLOCATOR allocator,uintptr_t env);
-
-uintptr_t OLISP_fun_call(OLISP_state *state);
-*/
 #endif
