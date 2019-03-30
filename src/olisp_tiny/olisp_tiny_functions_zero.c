@@ -1,7 +1,7 @@
 #include "olisp_cinterface.h"
 #include "ebm.h"
 
-uintptr_t OLISP_read_function_car(OLISP_state *state){
+uintptr_t OLISP_car(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
@@ -15,7 +15,7 @@ uintptr_t OLISP_read_function_car(OLISP_state *state){
     return EBM_CAR(pair);
 }
 
-uintptr_t OLISP_read_function_cdr(OLISP_state *state){
+uintptr_t OLISP_cdr(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
@@ -29,7 +29,7 @@ uintptr_t OLISP_read_function_cdr(OLISP_state *state){
     return EBM_CDR(pair);
 }
 
-uintptr_t OLISP_read_function_cons(OLISP_state *state){
+uintptr_t OLISP_cons(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 2){
