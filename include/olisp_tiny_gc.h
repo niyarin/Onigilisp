@@ -3,9 +3,10 @@
 
 typedef struct _olisp_tiny_gc_env{
     EBM_ALLOCATOR allocator;
+    uintptr_t allocator_env;
     struct _olisp_tiny_gc_env *parent_env;
     EBM_FREE free;
-    EBM_WRITE_BARRIER write_barrier;
+    EBM_GC_INTERFACE *gc_interface;
     uintptr_t arena;
 
     uintptr_t state;
@@ -20,5 +21,8 @@ typedef struct _olisp_tiny_gc_env{
 uintptr_t EBM_allocate_olisp_tiny_gc_env(EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env);
 
 uintptr_t EBM_olisp_tiny_allocate(size_t size,uintptr_t env);
+
+
+uintptr_t EBM_olisp_tiny_gc_write_barrier(uintptr_t object,uintptr_t setted_object,uintptr_t env_ptr);
 
 #endif
