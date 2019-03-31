@@ -85,6 +85,7 @@ uintptr_t EBM_frontend_allocate_output_string_port(uintptr_t ebm_string,EBM_ALLO
     EBM_record_primitive_set_CA(res,
                    2,
                    EBM_FRONTEND_STRING_PORT);
+    //new-object -> old-object
     EBM_record_primitive_set_CA(res,
                    3,
                   ebm_string);
@@ -489,6 +490,7 @@ uintptr_t OLISP_read(OLISP_state *state){
     if (!pass_config_flag){
         OLISP_reader_config reader_config;
         read_table = EBM_frontend_create_default_reader_table(state->allocator,state->allocator_env);
+
         dispatch_table =  EBM_frontend_create_default_dispatch_table(state->allocator,state->allocator_env);
 
         reader_config.read_function_table = read_table;
@@ -531,8 +533,6 @@ uintptr_t EBM_write_cstring_CA(char *cstring,uintptr_t port){
     }
 }
 
-
-
 uintptr_t EBM_newline(uintptr_t port){
     EBM_write_char_CA('\n',port);
     return EBM_UNDEF;
@@ -548,7 +548,6 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
     }else if (EBM_IS_RECORD_CR(object)){
         if (EBM_IS_SYMBOL_CR(object)){
             //TODO:縦棒必要なケースの判定
-
             uint32_t *symbol_data = (uint32_t*)EBM_record_third(object);
             int i=0;
             while (symbol_data[i]){
@@ -556,7 +555,22 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
                 i++;
             }
             return EBM_UNDEF;
+        }else if ( EBM_iS_OLISP_FUNCTION_CR(object)){
+            uintptr_t function_symbol = EBM_record_ref_CA(object,3);
+            if (function_symbol == EBM_NULL){
+                EBM_write_cstring_CA("#<olisp-function>",port);
+            }else{
+                EBM_write_cstring_CA("#<olisp-function=",port);
+                EBM_write_simple(function_symbol,port);
+                EBM_write_cstring_CA(">",port);
+            }
+            return EBM_UNDEF;
         }
+
+        printf("<record>");
+    }else if (EBM_IS_FX_NUMBER_CR(object)){
+        uintptr_t num =  EBM_FX_NUMBER_TO_C_INTEGER_CR(object);
+        printf("%ld",(long int)num);
     }else{
         switch (object){
             case EBM_TRUE:
@@ -568,6 +582,10 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
             case EBM_NULL:
                 EBM_write_cstring_CA("'()",port);
                 return EBM_UNDEF;
+            case EBM_UNDEF:
+                EBM_write_cstring_CA("#<UNDEF>",port);
+                return EBM_UNDEF;
+
         }
     }
 }
