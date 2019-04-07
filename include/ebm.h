@@ -95,6 +95,7 @@ uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t alloc
 #define EBM_CADR(p) EBM_CAR(EBM_CDR(p))
 #define EBM_CDAR(p) EBM_CDR(EBM_CAR(p))
 #define EBM_CDDR(p) EBM_CDR(EBM_CDR(p))
+#define EBM_CDDDR(p) EBM_CDR(EBM_CDDR(p))
 #define EBM_CADDR(p) EBM_CAR(EBM_CDDR(p))
 
 
@@ -173,6 +174,10 @@ uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol);
 uintptr_t EBM_allocate_symbol_trie(EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
 
+//
+//OLISP FUNCTION OPERATIONS
+//
+#define EBM_iS_OLISP_FUNCTION_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION ))
 
 //
 // OTHERS
