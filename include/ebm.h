@@ -14,6 +14,8 @@
 
 #define EBM_SMALL_OBJECT_LENGTH 5
 
+#define EBM_USE_IO
+
 //
 //BITS OPERATORS
 //

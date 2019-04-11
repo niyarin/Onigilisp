@@ -1,10 +1,12 @@
 #ifndef EBM_FRONTEND_H
 #define EBM_FRONTEND_H
 #include<stdint.h>
-#include<stdio.h>
 #include "ebm.h"
 #include "olisp_cinterface.h"
 
+#ifdef EBM_USE_IO
+#include<stdio.h>
+#endif
 
 #define EBM_FRONTEND_INPUT_PORT  EBM_allocate_FX_NUMBER_CA(0)
 #define EBM_FRONTEND_OUTPUT_PORT  EBM_allocate_FX_NUMBER_CA(1)
@@ -12,9 +14,13 @@
 #define EBM_FRONTEND_FILE_PORT  EBM_allocate_FX_NUMBER_CA(0)
 #define EBM_FRONTEND_STRING_PORT  EBM_allocate_FX_NUMBER_CA(1)
 
+
+#ifdef EBM_USE_IO
 uintptr_t EBM_frontend_allocate_input_file_port(FILE *fp,EBM_ALLOCATOR allocator,uintptr_t env);
-uintptr_t EBM_frontend_allocate_input_string_port(uintptr_t ebm_string,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_frontend_allocate_output_file_port_CA(FILE *fp,EBM_ALLOCATOR allocator,uintptr_t env);
+#endif
+
+uintptr_t EBM_frontend_allocate_input_string_port(uintptr_t ebm_string,EBM_ALLOCATOR allocator,uintptr_t env);
 uintptr_t EBM_frontend_allocate_output_string_port(uintptr_t ebm_string,EBM_ALLOCATOR allocator,uintptr_t env);
 
 uintptr_t OLISP_read(OLISP_state *state);

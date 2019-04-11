@@ -401,7 +401,15 @@ uintptr_t EBM_frontend_create_default_dispatch_table(EBM_ALLOCATOR allocator,uin
     return res;
 }
 
-
+static uintptr_t _symbol_intern(uintptr_t symbol,OLISP_state *state){
+    uintptr_t trie = state->symbol_intern;
+    uintptr_t res = EBM_symbol_trie_ref(trie,symbol);
+    if (res == EBM_UNDEF){
+        EBM_symbol_trie_set(trie,symbol,symbol,state->gc_interface);   
+        return symbol;
+    }
+    return res;
+}
 
 static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t max_length,OLISP_state *state){
     if (length == max_length){
@@ -412,7 +420,10 @@ static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t 
     
     EBM_ALLOCATOR allocator = state->allocator;
     uintptr_t allocator_env = state->allocator_env;
-    return EBM_allocate_symbol_CA(token_string,allocator,allocator_env);
+    return _symbol_intern(
+            EBM_allocate_symbol_CA(token_string,allocator,allocator_env),
+            state);
+
 }
 
 
