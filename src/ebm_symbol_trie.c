@@ -198,6 +198,8 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                             uintptr_t new_index = org_index - original_base_pos + new_base; 
                             check[new_index] = pos;
                             base[new_index] = base[org_index];
+                            items[new_index] = items[org_index];
+                            items[org_index] = EBM_NULL;//?
                             //整合性
                             int j;
                             for (j=0;j<mem_size;j++){
@@ -250,6 +252,7 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
     if (!already_inserted || items[pos] == EBM_UNDEF){
         uintptr_t item_pair = EBM_allocate_pair(symbol,EBM_record_ref_CA(trie,6),gc_interface->allocator,gc_interface->env);
         EBM_record_set_CA(trie,6,item_pair,gc_interface->write_barrier,gc_interface->env);
+        //TODO:item[pos]にひとつしかいれられないのはおかしいので直す?
         items[pos] = EBM_allocate_pair(object,
                                        EBM_allocate_pair(
                                            item_pair,
