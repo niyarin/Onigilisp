@@ -40,10 +40,20 @@ uintptr_t OLISP_cfun_call(OLISP_state *state,OLISP_cfun cfun,uintptr_t arg_size,
 }
 
 uintptr_t OLISP_create_function_for_ebm(OLISP_cfun cfun,EBM_ALLOCATOR  allocator,uintptr_t allocator_env){
-    uintptr_t res = EBM_allocate_record_CA(3,allocator,allocator_env);
+    uintptr_t res = OLISP_create_function_for_ebm_with_name(
+                        cfun,
+                        EBM_NULL,
+                        allocator,
+                        allocator_env);
+    return res;
+}
+
+uintptr_t OLISP_create_function_for_ebm_with_name(OLISP_cfun cfun,uintptr_t name_symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+    uintptr_t res = EBM_allocate_record_CA(4,allocator,allocator_env);
     EBM_record_primitive_set_CA(res,0,EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION);
     EBM_record_primitive_set_CA(res,1,0);//OLISP fun は常に0
     EBM_record_primitive_set_CA(res,2,(uintptr_t)cfun);
+    EBM_record_primitive_set_CA(res,3,name_symbol);
     return res;
 }
 
