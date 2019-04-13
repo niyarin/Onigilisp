@@ -246,7 +246,7 @@ uint32_t EBM_peek_char(uintptr_t port){
 uintptr_t OLISP_read1_with_character_table(OLISP_state *state);
 
 uintptr_t OLISP_read_function_read_list(OLISP_state *state){
-    printf("::::::::::::::::::::[read list]\n");
+    //printf("::::::::::::::::::::[read list]\n");
     if (state->arg_size >= 3){
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
@@ -270,7 +270,7 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
 
 
 uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
-    printf("::::::::::::::::::::::::::::::::::::[RPAREN]\n");
+    //printf("::::::::::::::::::::::::::::::::::::[RPAREN]\n");
     exit(1);
     return EBM_NULL;
 }
@@ -278,7 +278,7 @@ uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
 
 uintptr_t OLISP_read_function_read_space(OLISP_state *state){
     if (state->arg_size >= 3){
-        printf("::::::::::::::::::::::::::::::::::::[SP]\n");
+        //printf("::::::::::::::::::::::::::::::::::::[SP]\n");
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
@@ -291,7 +291,7 @@ uintptr_t OLISP_read_function_read_space(OLISP_state *state){
 
 uintptr_t OLISP_read_function_read_newline(OLISP_state *state){//TODO:あとで行番号の追加
     if (state->arg_size >= 3){
-        printf("::::::::::::::::::::::::::::::::::::[NEWLINE]\n");
+        //printf("::::::::::::::::::::::::::::::::::::[NEWLINE]\n");
         uintptr_t port = state->args1[0];
         uintptr_t target_ebm_c = state->args1[1];
         uintptr_t reader_config_ptr = state->args1[2];
@@ -303,7 +303,7 @@ uintptr_t OLISP_read_function_read_newline(OLISP_state *state){//TODO:あとで�
 
 
 uintptr_t OLISP_read_function_read_quote(OLISP_state *state){
-    printf("::::::::::::::::::::::::::::::::::::[QUOTE]\n");
+    //printf("::::::::::::::::::::::::::::::::::::[QUOTE]\n");
     uintptr_t port = state->args1[0];
     uintptr_t target_ebm_c = state->args1[1];
     uintptr_t reader_config_ptr = state->args1[2];
@@ -321,7 +321,7 @@ uintptr_t OLISP_read_function_read_quote(OLISP_state *state){
 }
 
 uintptr_t OLISP_read_function_read_dispatch_pattern(OLISP_state *state){
-    printf("DISPATCH\n");
+    //printf("DISPATCH\n");
     uintptr_t port = state->args1[0];
     uintptr_t cc = EBM_char2unicode_CR(state->args1[1]);
     uintptr_t reader_config_ptr = state->args1[2];
@@ -351,19 +351,19 @@ uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
     uintptr_t reader_config_ptr = state->args1[3];
     if (cc2 == 't'){
  
-        printf("::::::::::::::::::::[read true]\n");
+        //printf("::::::::::::::::::::[read true]\n");
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
         uintptr_t maybe_true = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
         //maybe_true must be t or true symbol.
 
         //TODO:check
 
-        printf("TRUE READ END\n");
+        //printf("TRUE READ END\n");
         return EBM_TRUE;
     }else if (cc2 == 'f'){
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
         uintptr_t maybe_false = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);  
-        printf("::::::::::::::::::::[read false]\n");
+        //printf("::::::::::::::::::::[read false]\n");
         return EBM_FALSE;
     }
     exit(1);
@@ -447,7 +447,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
             if (cc == EOF||cc == 0){
                 return EBM_EOF;
             }
-            printf("%c\n",cc);
+            //printf("%c\n",cc);
             uintptr_t read_function_apair = EBM_char_table_ref_CA(character_table,cc);
             if (read_function_apair != EBM_FALSE){
                 uintptr_t config_ptr = state->args1[2];
@@ -458,7 +458,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
 
                 if (delim_cc){
                     if (delim_cc == cc){
-                        printf(":::::::::::::::::::::::::[CLOSE PAREN]\n");
+                        //printf(":::::::::::::::::::::::::[CLOSE PAREN]\n");
                         return EBM_DUMMY_OBJECT;
                     }
                 }
@@ -485,7 +485,6 @@ uintptr_t OLISP_read(OLISP_state *state){
     uintptr_t read_table;
     uintptr_t dispatch_table;
     int pass_config_flag = 0;
-
     if (state->arg_size >= 1){
         port = state->args1[0];
         if (state->arg_size >= 2){
@@ -493,10 +492,10 @@ uintptr_t OLISP_read(OLISP_state *state){
             config_ptr = state->args1[1];
             read_table = ((OLISP_reader_config*)(EBM_pointer_box_ref_CR(config_ptr)))->read_function_table;
         }
+
     }else if (state->arg_size == 0){
         port = EBM_frontend_allocate_input_file_port(stdout,state->allocator,state->allocator_env);
     }
-
 
     if (!pass_config_flag){
         OLISP_reader_config reader_config;
@@ -575,6 +574,16 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
                 EBM_write_simple(function_symbol,port);
                 EBM_write_cstring_CA(">",port);
             }
+            return EBM_UNDEF;
+        }else if (EBM_IS_VECTOR_CR(object)){
+            int i;
+            EBM_write_cstring_CA("#(",port);
+            for (i=0;i<EBM_vector_length_CR(object);i++){
+                EBM_write_simple(EBM_vector_ref_CA(object,i),port);
+                EBM_write_char_CA(' ',port);
+
+            }
+            EBM_write_cstring_CA(")",port);
             return EBM_UNDEF;
         }
 
