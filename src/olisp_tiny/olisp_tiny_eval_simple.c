@@ -6,7 +6,11 @@
 
 #define SYNTAX_FX_NUMBER_DEFINE EBM_allocate_FX_NUMBER_CA(0)
 #define SYNTAX_FX_NUMBER_LAMBDA EBM_allocate_FX_NUMBER_CA(1)
+#define SYNTAX_FX_NUMBER_IF EBM_allocate_FX_NUMBER_CA(2)
+#define SYNTAX_FX_NUMBER_SET EBM_allocate_FX_NUMBER_CA(3)
 #define SYNTAX_FX_NUMBER_QUOTE EBM_allocate_FX_NUMBER_CA(4)
+#define SYNTAX_FX_NUMBER_DEFINE_RECORD_TYPE EBM_allocate_FX_NUMBER_CA(5)
+#define SYNTAX_FX_NUMBER_BEGIN EBM_allocate_FX_NUMBER_CA(6)
 
 #define SYNTAX_FX_NUMBER_FRUN EBM_allocate_FX_NUMBER_CA(100)
 
@@ -125,6 +129,53 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                         code = EBM_NULL;
                     }
                     break;
+                case SYNTAX_FX_NUMBER_BEGIN:
+                    {
+                        if (eval_info == EBM_NULL){
+                            eval_info = 
+                                EBM_allocate_pair(
+                                    EBM_CDR(code),
+                                    EBM_NULL,
+                                    allocator,
+                                    allocator_env);
+                        }
+
+                        if (EBM_CAR(eval_info) == EBM_NULL){
+                            res = EBM_CADR(eval_info);
+                            eval_info = EBM_NULL;
+                        }else{
+                           if (_OLISP_CAN_EVAL(EBM_CAAR(eval_info))){
+                                stack = EBM_allocate_pair(
+                                   EBM_allocate_rev_list(
+                                       4,
+                                       allocator,
+                                       allocator_env,
+                                       lexical_information,
+                                       EBM_CDR(eval_info),
+                                       EBM_CAR(eval_info),
+                                       code),
+                                   stack,
+                                   allocator,
+                                   allocator_env);
+                                code = EBM_CAAR(eval_info);
+                                eval_info = EBM_NULL;
+                                continue;         
+                           }else{
+                               eval_info = 
+                                   EBM_allocate_pair(
+                                           EBM_CDAR(eval_info),
+                                           EBM_allocate_pair(
+                                               EBM_CAAR(eval_info),
+                                               EBM_CDDR(eval_info),
+                                               allocator,
+                                               allocator_env),
+                                           allocator,
+                                           allocator_env);
+                               continue;
+                           } 
+                        }
+                    break;
+                    }
                 case SYNTAX_FX_NUMBER_FRUN:
                     {
                         if (EBM_NULL == eval_info){
@@ -370,6 +421,33 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                            new_operator);
                 }
                 break;
+            case SYNTAX_FX_NUMBER_DEFINE_RECORD_TYPE:
+                {
+                    uintptr_t record_name = EBM_CADR(expression);
+                    uintptr_t constructor = EBM_CADDR(expression);
+                }
+                break;
+            case SYNTAX_FX_NUMBER_BEGIN:
+                {
+
+                    uintptr_t tails = 
+                         _EBM_olisp_aux_recursive_expand_simple(
+                                 EBM_CDR(expression),
+                                 environment,
+                                 local_cell,
+                                 gc_interface);
+
+                    uintptr_t res = 
+                        EBM_allocate_pair(
+                                SYNTAX_FX_NUMBER_BEGIN,
+                                tails,
+                                gc_interface->allocator,
+                                gc_interface->env);
+
+
+
+                }
+                break;
             default:
                 {
                     uintptr_t tails = 
@@ -418,9 +496,9 @@ uintptr_t EBM_olisp_tiny_expand_simple(uintptr_t expression,uintptr_t environmen
 }
 
 static uintptr_t EBM_olisp_tiny_set_default_expand_environtment(uintptr_t trie_expand_env,EBM_GC_INTERFACE *gc_interface){
-    char syntax_names[][7] = {"define","lambda","if","set!","quote"};
+    char syntax_names[][7] = {"define","lambda","if","set!","quote","define-record-type","begin"};
     int i;
-    for (i=0;i<5;i++){
+    for (i=0;i<7;i++){
         EBM_symbol_trie_set(trie_expand_env, EBM_allocate_symbol_from_cstring_CA(syntax_names[i],gc_interface->allocator,gc_interface->env),EBM_allocate_FX_NUMBER_CA(i),gc_interface);
     }
     return EBM_NULL;
