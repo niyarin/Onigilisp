@@ -132,12 +132,26 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                 case SYNTAX_FX_NUMBER_BEGIN:
                     {
                         if (eval_info == EBM_NULL){
-                            eval_info = 
-                                EBM_allocate_pair(
-                                    EBM_CDR(code),
-                                    EBM_NULL,
-                                    allocator,
-                                    allocator_env);
+                            if (EBM_CDR(code) == EBM_NULL){
+                                eval_info = 
+                                    EBM_allocate_pair(
+                                        EBM_NULL,
+                                        EBM_allocate_pair(
+                                            EBM_UNDEF,
+                                            EBM_NULL,
+                                            allocator,
+                                            allocator_env),
+                                        allocator,
+                                        allocator_env);
+
+                            }else{
+                                eval_info = 
+                                    EBM_allocate_pair(
+                                        EBM_CDR(code),
+                                        EBM_NULL,
+                                        allocator,
+                                        allocator_env);
+                            }
                         }
 
                         if (EBM_CAR(eval_info) == EBM_NULL){
