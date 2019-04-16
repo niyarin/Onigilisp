@@ -267,3 +267,21 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                     gc_interface);
     }
 }
+
+uintptr_t EBM_symbol_trie_to_alist(uintptr_t symbol_trie,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
+    uintptr_t res = EBM_NULL;
+    uintptr_t cell = EBM_record_ref_CA(symbol_trie,6);
+    while (cell != EBM_NULL){
+        res = EBM_allocate_pair(
+                EBM_allocate_pair(
+                    EBM_CAAR(cell),
+                    EBM_CDAR(cell),
+                    allocator,
+                    allocator_env),
+                res,
+                allocator,
+                allocator_env);
+        cell = EBM_CDR(cell);
+    }
+    return res;
+}

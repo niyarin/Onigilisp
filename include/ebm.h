@@ -116,6 +116,8 @@ uintptr_t EBM_char_table_set_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM
 #define EBM_BUILT_IN_RECORD_TYPE_PORT EBM_allocate_FX_NUMBER_CA(5)
 #define EBM_BUILT_IN_RECORD_TYPE_VECTOR EBM_allocate_FX_NUMBER_CA(2)
 #define EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE EBM_allocate_FX_NUMBER_CA(3)
+#define EBM_BUILT_IN_RECORD_TYPE_STRING EBM_allocate_FX_NUMBER_CA(4)
+
 #define EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER EBM_allocate_FX_NUMBER_CA(29)
 #define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
 #define EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION EBM_allocate_FX_NUMBER_CA(52)
@@ -142,6 +144,7 @@ uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t ob
 #define EBM_vector_set_CA(vector,index,object,write_barrier,allocator_env) EBM_record_set_CA(vector,index+2,object,write_barrier,allocator_env);
 #define EBM_vector_length_CR(vector) EBM_record_ref_CA(vector,1)
 #define EBM_vector_ref_CA(vector,index) EBM_record_ref_CA(vector,index + 2)
+#define EBM_IS_VECTOR_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_VECTOR))
 
 //
 //SYMBOL OPERATIONS
@@ -175,6 +178,7 @@ uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t
 uintptr_t EBM_symbol_trie_ref(uintptr_t trie,uintptr_t symbol);
 uintptr_t EBM_allocate_symbol_trie(EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
+uintptr_t EBM_symbol_trie_to_alist(uintptr_t symbol_trie,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 
 //
 //OLISP FUNCTION OPERATIONS
