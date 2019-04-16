@@ -1,4 +1,4 @@
-(define-library (olisp base-library1)
+(define-library (olisp-tiny base-library1)
    (export caar cadr cdar cddr not)
    (begin
       (define caar
