@@ -587,7 +587,13 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
             return EBM_UNDEF;
         }
 
-        printf("<record>");
+        if (EBM_IS_SYMBOL_CR(EBM_record_first(object))){
+                EBM_write_cstring_CA("#record=",port);
+                EBM_write_simple(EBM_record_first(object),port);
+                return EBM_UNDEF;
+        }
+
+        printf("#<record>");
     }else if (EBM_IS_FX_NUMBER_CR(object)){
         uintptr_t num =  EBM_FX_NUMBER_TO_C_INTEGER_CR(object);
         printf("%ld",(long int)num);
