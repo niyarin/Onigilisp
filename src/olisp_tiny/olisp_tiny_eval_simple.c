@@ -14,6 +14,7 @@
 #define SYNTAX_FX_NUMBER_DEFINE_LIBRARY EBM_allocate_FX_NUMBER_CA(7)
 #define SYNTAX_FX_NUMBER_IMPORT EBM_allocate_FX_NUMBER_CA(8)
 #define SYNTAX_FX_NUMBER_EXPORT EBM_allocate_FX_NUMBER_CA(9)
+#define SYNTAX_FX_NUMBER_ER_MACRO_TRANSFORMER  EBM_allocate_FX_NUMBER_CA(10)
 
 #define SYNTAX_FX_NUMBER_FRUN EBM_allocate_FX_NUMBER_CA(100)
 
@@ -32,7 +33,8 @@ static uintptr_t write(uintptr_t obj,EBM_ALLOCATOR allocator,uintptr_t allocator
 
 
 
-uintptr_t _OLISP_allocate_namespace_ref(uintptr_t symbol,uintptr_t environment,OLISP_state *state);
+static uintptr_t _OLISP_allocate_namespace_ref(uintptr_t symbol,uintptr_t environment,OLISP_state *state);
+static uintptr_t _OLISP_allocate_global_ref(uintptr_t addr_fx,OLISP_state *state);
 
 static uintptr_t EBM_olisp_tiny_lookup(uintptr_t trie,uintptr_t symbol){
     return EBM_symbol_trie_ref(trie,symbol);
@@ -73,6 +75,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
     uintptr_t allocator_env = gc_interface->env;
 
     uintptr_t namespace_ref_symbol;
+    uintptr_t global_ref_symbol;
     {
         namespace_ref_symbol =
             OLISP_symbol_intern(
@@ -81,8 +84,14 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                    olisp_state->allocator,
                    olisp_state->allocator_env),
                 olisp_state);
+        global_ref_symbol = 
+            OLISP_symbol_intern(
+                EBM_allocate_symbol_from_cstring_CA(
+                   "<global-ref>",
+                   olisp_state->allocator,
+                   olisp_state->allocator_env),
+                olisp_state);
     }
-
 
     uintptr_t stack = EBM_NULL;//((code,next-evals,evaled,lex) ... )
     uintptr_t res = EBM_UNDEF;
@@ -90,6 +99,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
     uintptr_t code = expanded_expression;
     uintptr_t eval_info = EBM_NULL;// (次の評価 . 評価済み)
     uintptr_t lexical_information = EBM_vector_ref_CA(environment,3);
+    uintptr_t global = EBM_CAR(EBM_vector_ref_CA(environment,8));
 
     while (stack != EBM_NULL ||  code != EBM_NULL){
         if (EBM_IS_PAIR_CR(code)){
@@ -117,7 +127,13 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                eval_info = EBM_NULL;
                                continue;
                            }else{
-                               EBM_olisp_tiny_set_env(eval_environment,EBM_CADR(code),EBM_CAR(EBM_CDR(eval_info)),gc_interface);
+                               EBM_vector_set_CA(
+                                       global,
+                                       EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(EBM_CADR(code))),
+                                       EBM_CADR(eval_info),
+                                       gc_interface->write_barrier,
+                                       gc_interface->env);
+
                                res = EBM_UNDEF;
                            }
                         }else{
@@ -242,6 +258,8 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                             }
 
                             uintptr_t fun =  OLISP_get_arg(olisp_state,0);
+                            write(code,allocator,allocator_env);
+                            write(fun,allocator,allocator_env);
                             if (EBM_record_ref_CA(fun,1) == 0){
                                 uintptr_t _res = OLISP_fun_call(olisp_state);
                                 res = _res;
@@ -400,17 +418,14 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                     exit(1);
                 }
             }
-            if (EBM_IS_RECORD_CR(_res) 
-                    && (EBM_record_first(_res) == namespace_ref_symbol)){
-                uintptr_t library_env = 
-                    EBM_record_third(_res);
-                uintptr_t target_symbol = 
-                    EBM_record_second(_res);
-                _res =  EBM_olisp_tiny_lookup(EBM_vector_ref_CA(library_env,1),target_symbol);
-                
-            }
-                    
             res = _res;
+        }else if (EBM_IS_RECORD_CR(code) 
+                && EBM_record_first(code) == global_ref_symbol){
+            res = code;
+            while (EBM_IS_RECORD_CR(res) 
+                && EBM_record_first(res) == global_ref_symbol){
+                res = EBM_vector_ref_CA(global,EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(res)));
+            }
         }else{
             res = code;
         }
@@ -435,6 +450,24 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
     return res;
 }
 
+static _EBM_olisp_allocate_er_macro_object(uintptr_t lambda,uintptr_t environment,uintptr_t local_cell,OLISP_state *state){
+     uintptr_t res = EBM_allocate_record_CA(4,state->allocator,state->allocator_env);
+
+    EBM_record_primitive_set_CA(res,
+                                0,
+                                OLISP_symbol_intern(
+                                   EBM_allocate_symbol_from_cstring_CA(
+                                       "<er-macro-object>",
+                                       state->allocator,
+                                       state->allocator_env),
+                                    state));
+    EBM_record_primitive_set_CA(res,1,lambda);
+    EBM_record_primitive_set_CA(res,2,environment);   
+    EBM_record_primitive_set_CA(res,3,local_cell);   
+
+}
+
+
 static uintptr_t _EBM_olisp_aux_recursive_expand_simple(uintptr_t expression,uintptr_t environment,uintptr_t local_cell,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state){
 
     if (expression == EBM_NULL){
@@ -446,6 +479,36 @@ static uintptr_t _EBM_olisp_aux_recursive_expand_simple(uintptr_t expression,uin
             _EBM_olisp_aux_recursive_expand_simple(EBM_CDR(expression),environment,local_cell,gc_interface,olisp_state),
             gc_interface->allocator,
             gc_interface->env);
+}
+
+static uintptr_t _EBM_olisp_tiny_eval_define(uintptr_t environment,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface,OLISP_state* state){
+
+    uintptr_t address_trie = 
+        EBM_vector_ref_CA(environment,7);
+
+    uintptr_t global_ref = 
+        EBM_symbol_trie_ref(
+                address_trie,
+                symbol);
+    if (global_ref == EBM_UNDEF){
+        uintptr_t address_box =
+            EBM_vector_ref_CA(environment,6);
+        global_ref = _OLISP_allocate_global_ref(EBM_CAR(address_box),state);
+        EBM_PRIMITIVE_SET_CAR(address_box,EBM_FX_ADD(EBM_CAR(address_box),EBM_allocate_FX_NUMBER_CA(1)));
+        EBM_symbol_trie_set(
+                address_trie,
+                symbol,
+                global_ref,
+                gc_interface);
+    }
+    uintptr_t global = EBM_CAR(EBM_vector_ref_CA(environment,8));
+    EBM_vector_set_CA(
+            global,
+            EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(global_ref)),
+            object,
+            gc_interface->write_barrier,
+            gc_interface->env);
+    return EBM_UNDEF;
 }
 
 static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uintptr_t environment,uintptr_t local_cell,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
@@ -481,12 +544,20 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                 }
             case SYNTAX_FX_NUMBER_DEFINE:
                 {
+                    uintptr_t sym_object = 
+                        _EBM_olisp_tiny_expand_simple_internal(
+                            EBM_CADR(expression),
+                            environment,
+                            local_cell,
+                            gc_interface,
+                            state);
+
                     uintptr_t exp = _EBM_olisp_tiny_expand_simple_internal(EBM_CADDR(expression),environment,local_cell, gc_interface,state);
                     return EBM_allocate_rev_list(3,
                             gc_interface->allocator,
                             gc_interface->env,
                             exp,
-                            EBM_CADR(expression),
+                            sym_object,
                             SYNTAX_FX_NUMBER_DEFINE);
                 }
                 break;
@@ -541,8 +612,13 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                 break;
             case SYNTAX_FX_NUMBER_DEFINE_LIBRARY:
                 {
+                    uintptr_t offset_box = 
+                        EBM_vector_ref_CA(environment,6);
+                    uintptr_t global_box = 
+                        EBM_vector_ref_CA(environment,8);
+
                     //外側の環境のimportをマージする
-                    uintptr_t new_environment = EBM_allocate_olisp_tiny_eval_simple_environment(gc_interface);
+                    uintptr_t new_environment = EBM_allocate_olisp_tiny_eval_simple_environment(gc_interface,offset_box,global_box,state);
                     uintptr_t tails = 
                         _EBM_olisp_aux_recursive_expand_simple(
                                  EBM_CDDR(expression),
@@ -626,13 +702,13 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                             while (namespace_cell != EBM_NULL
                                       && import_target_cell != EBM_NULL){
                                 if (EBM_CAR(namespace_cell) != EBM_CAR(import_target_cell)){
-                                
                                     same_name = 0;
                                     break;
                                 }
                                 namespace_cell = EBM_CDR(namespace_cell);
                                 import_target_cell = EBM_CDR(import_target_cell);
                             }
+
                             if (namespace_cell != EBM_NULL ||
                                     import_target_cell != EBM_NULL){
                                 same_name = 0;
@@ -652,8 +728,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                 EBM_vector_ref_CA(
                                         library_env,
                                         5);
-
-                            uintptr_t eval_environment = EBM_vector_ref_CA(environment,1);
                             while (exports != EBM_NULL){
                                 uintptr_t sym = EBM_CAR(exports);
                                 if (EBM_IS_SYMBOL_CR(sym)){
@@ -668,12 +742,23 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                             sym,
                                             ref_object,
                                             gc_interface);
-
-                                    EBM_symbol_trie_set(
-                                            eval_environment,
+                                    
+                                    uintptr_t eval_global_ref =
+                                        _EBM_olisp_tiny_expand_simple_internal(
                                             sym,
-                                            ref_object,
-                                            gc_interface);
+                                            library_env,
+                                            local_cell,
+                                            gc_interface,
+                                            state);
+                                            
+
+
+                                    _EBM_olisp_tiny_eval_define(
+                                            environment,
+                                            sym,
+                                            eval_global_ref,
+                                            gc_interface,
+                                            state);
                                 }else{
                                     //sorry
                                     //TODO:export rename考慮
@@ -697,7 +782,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                  local_cell,
                                  gc_interface,
                                  state);
-
                     uintptr_t res = 
                         EBM_allocate_pair(
                                 new_operator,
@@ -721,6 +805,16 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                 gc_interface->env);
                 }
                 break;
+            case SYNTAX_FX_NUMBER_ER_MACRO_TRANSFORMER:
+                {
+                    uintptr_t expanded_lambda = 
+                        _EBM_olisp_tiny_expand_simple_internal(
+                                EBM_CADR(expression),
+                                environment,
+                                local_cell,
+                                gc_interface,
+                                state);
+                }
             default:
                 {
                     uintptr_t tails = 
@@ -753,10 +847,48 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                 }
                 break;
         }
-
-
-
     }else if ( EBM_IS_SYMBOL_CR(expression)){
+        //local
+        
+        uintptr_t cell = local_cell;
+        char hit = 0;
+        while (cell != EBM_NULL){
+            uintptr_t symbols = EBM_CAR(cell);
+            while (symbols != EBM_NULL && !hit){
+                if (EBM_CAR(symbols) == expression){
+                    hit = 1;
+                    break;
+                }
+                symbols = EBM_CDR(symbols);
+            }
+            cell = EBM_CDR(cell);
+        }
+
+        if (!hit){
+            //global reference
+            uintptr_t address_trie = EBM_vector_ref_CA(environment,7);
+
+            uintptr_t global_ref = 
+                EBM_symbol_trie_ref(
+                        address_trie,
+                        expression);
+            
+            if (global_ref == EBM_UNDEF){
+                uintptr_t address_box =
+                    EBM_vector_ref_CA(environment,6);
+                global_ref = _OLISP_allocate_global_ref(EBM_CAR(address_box),state);
+                EBM_PRIMITIVE_SET_CAR(address_box,EBM_FX_ADD(EBM_CAR(address_box),EBM_allocate_FX_NUMBER_CA(1)));
+
+                EBM_symbol_trie_set(
+                        address_trie,
+                        expression,
+                        global_ref,
+                        gc_interface);
+            }
+            write(expression,gc_interface->allocator,gc_interface->env);
+            return global_ref;
+        }
+
         //look up
         return expression;//TODO
     }else if (expression == EBM_TRUE){
@@ -768,21 +900,20 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
     }
 }
 
-
 uintptr_t EBM_olisp_tiny_expand_simple(uintptr_t expression,uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state){
     return _EBM_olisp_tiny_expand_simple_internal(expression,environment,EBM_NULL ,gc_interface,olisp_state);
 }
 
 static uintptr_t EBM_olisp_tiny_set_default_expand_environtment(uintptr_t trie_expand_env,EBM_GC_INTERFACE *gc_interface){
-    char syntax_names[][18] = {"define","lambda","if","set!","quote","define-record-type","begin","define-library","import","export"};
+    char syntax_names[][21] = {"define","lambda","if","set!","quote","define-record-type","begin","define-library","import","export","er-macro-transformer"};
     int i;
-    for (i=0;i<10;i++){
+    for (i=0;i<11;i++){
         EBM_symbol_trie_set(trie_expand_env, EBM_allocate_symbol_from_cstring_CA(syntax_names[i],gc_interface->allocator,gc_interface->env),EBM_allocate_FX_NUMBER_CA(i),gc_interface);
     }
     return EBM_NULL;
 }
 
-static uintptr_t EBM_olisp_tiny_set_default_eval_environment(uintptr_t env,EBM_GC_INTERFACE *gc_interface){
+static uintptr_t EBM_olisp_tiny_set_default_eval_environment(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
 
     char fnames[][13] = {"cons","car","cdr","eq?","write-simple","vector"};
     OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector};
@@ -791,21 +922,25 @@ static uintptr_t EBM_olisp_tiny_set_default_eval_environment(uintptr_t env,EBM_G
     for (i=0;i<6;i++){
         uintptr_t function_name_symbol = 
                     EBM_allocate_symbol_from_cstring_CA(fnames[i],gc_interface->allocator,gc_interface->env);
+        
+        function_name_symbol = 
+            OLISP_symbol_intern(
+                    function_name_symbol,
+                    state);
 
-        EBM_olisp_tiny_set_env(
-             env,
-             function_name_symbol,
+        uintptr_t function = 
              OLISP_create_function_for_ebm_with_name(
                 olisp_cfuns[i],
                 function_name_symbol,
                 gc_interface->allocator,
-                gc_interface->env),
-            gc_interface);
+                gc_interface->env);
+
+        _EBM_olisp_tiny_eval_define(environment, function_name_symbol, function ,gc_interface,state);
     }
     return EBM_UNDEF;
 }
 
-uintptr_t _OLISP_allocate_namespace_ref(uintptr_t symbol,uintptr_t environment,OLISP_state *state){
+static uintptr_t _OLISP_allocate_namespace_ref(uintptr_t symbol,uintptr_t environment,OLISP_state *state){
     uintptr_t res = EBM_allocate_record_CA(3,state->allocator,state->allocator_env);
 
     EBM_record_primitive_set_CA(res,
@@ -821,18 +956,33 @@ uintptr_t _OLISP_allocate_namespace_ref(uintptr_t symbol,uintptr_t environment,O
     return res;
 }
 
-uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_interface){
+static uintptr_t _OLISP_allocate_global_ref(uintptr_t addr_fx,OLISP_state *state){
+    uintptr_t res = EBM_allocate_record_CA(2,state->allocator,state->allocator_env);
+
+    EBM_record_primitive_set_CA(res,
+                                0,
+                                OLISP_symbol_intern(
+                                   EBM_allocate_symbol_from_cstring_CA(
+                                       "<global-ref>",
+                                       state->allocator,
+                                       state->allocator_env),
+                                    state));
+    EBM_record_primitive_set_CA(res,1,addr_fx);
+    return res;
+}
+
+
+uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_interface,uintptr_t offset_box,uintptr_t global_box,OLISP_state *state){
 
     EBM_ALLOCATOR allocator = gc_interface->allocator;
     uintptr_t allocator_env = gc_interface->env;
 
-    uintptr_t res = EBM_allocate_vector_CA(6,allocator,allocator_env);
+    uintptr_t res = EBM_allocate_vector_CA(9,allocator,allocator_env);
     EBM_vector_primitive_set_CA(res,0,EBM_NULL);
      
     //set eval environment
-    {
+    {//不要になる予定
         uintptr_t symbol_trie = EBM_allocate_symbol_trie(allocator,allocator_env); 
-        EBM_olisp_tiny_set_default_eval_environment(symbol_trie,gc_interface);
 
         EBM_vector_set_CA(res,1,symbol_trie,gc_interface->write_barrier,gc_interface->env);
     }   
@@ -842,6 +992,7 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
         uintptr_t symbol_trie = EBM_allocate_symbol_trie(allocator,allocator_env);
         EBM_olisp_tiny_set_default_expand_environtment(symbol_trie,gc_interface);
         EBM_vector_set_CA(res,2,symbol_trie,gc_interface->write_barrier,gc_interface->env);
+        
     }
 
     {//set local env for eval
@@ -856,5 +1007,24 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
     {//exports
         EBM_vector_primitive_set_CA(res,5,EBM_NULL);
     }
+
+    {//offset
+        EBM_vector_primitive_set_CA(res,6,offset_box);
+    }
+
+    {//global name to address
+        EBM_vector_primitive_set_CA(
+                res,
+                7,
+                EBM_allocate_symbol_trie(gc_interface->allocator,gc_interface->env));
+    }
+
+    {//globals
+        EBM_vector_primitive_set_CA(res,8,global_box);
+    }
+
+
+    EBM_olisp_tiny_set_default_eval_environment(res,gc_interface,state);
+
     return res;
 }
