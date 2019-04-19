@@ -258,8 +258,6 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                             }
 
                             uintptr_t fun =  OLISP_get_arg(olisp_state,0);
-                            write(code,allocator,allocator_env);
-                            write(fun,allocator,allocator_env);
                             if (EBM_record_ref_CA(fun,1) == 0){
                                 uintptr_t _res = OLISP_fun_call(olisp_state);
                                 res = _res;
@@ -885,7 +883,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                         global_ref,
                         gc_interface);
             }
-            write(expression,gc_interface->allocator,gc_interface->env);
             return global_ref;
         }
 
