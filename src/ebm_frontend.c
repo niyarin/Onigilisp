@@ -8,7 +8,7 @@ typedef struct {
    uintptr_t dispatch_table;
 }OLISP_reader_config;
 
-
+//TODO:LINUX以外の改行文字への対応
 
 uintptr_t EBM_frontend_allocate_input_file_port(FILE *fp,EBM_ALLOCATOR allocator,uintptr_t env){
     uintptr_t res = EBM_allocate_record_CA(5,allocator,env);
@@ -320,8 +320,25 @@ uintptr_t OLISP_read_function_read_quote(OLISP_state *state){
     return res;
 }
 
+uintptr_t OLISP_read_function_read_semi_colon(OLISP_state *state){
+    if (state->arg_size >= 3){
+        uintptr_t port = state->args1[0];
+        uintptr_t target_ebm_c = state->args1[1];
+        uintptr_t reader_config_ptr = state->args1[2];
+        OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
+
+        uint32_t cc;
+        while (1){
+           cc = EBM_read_char_CR(port);
+           if (cc =='\n'){
+               break;
+           }
+        }
+        return OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
+    }
+}
+
 uintptr_t OLISP_read_function_read_dispatch_pattern(OLISP_state *state){
-    //printf("DISPATCH\n");
     uintptr_t port = state->args1[0];
     uintptr_t cc = EBM_char2unicode_CR(state->args1[1]);
     uintptr_t reader_config_ptr = state->args1[2];
@@ -371,7 +388,7 @@ uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
 
 
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
-    //TODO:あとでprimitiveを取る=>大きさ128だし問題なさそう。
+    //TODO:あとでprimitiveを取る
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
     EBM_char_table_primitive_insert_CA(res,'(',OLISP_create_function_for_ebm(OLISP_read_function_read_list,allocator,allocator_env),allocator,allocator_env);
 
@@ -380,6 +397,8 @@ uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintp
     EBM_char_table_primitive_insert_CA(res,' ',OLISP_create_function_for_ebm(OLISP_read_function_read_space,allocator,allocator_env),allocator,allocator_env);
 
     EBM_char_table_primitive_insert_CA(res,'\n',OLISP_create_function_for_ebm(OLISP_read_function_read_newline,allocator,allocator_env),allocator,allocator_env);
+
+    EBM_char_table_primitive_insert_CA(res,';',OLISP_create_function_for_ebm(OLISP_read_function_read_semi_colon,allocator,allocator_env),allocator,allocator_env);
 
     EBM_char_table_primitive_insert_CA(res,'#',OLISP_create_function_for_ebm(OLISP_read_function_read_dispatch_pattern,allocator,allocator_env),allocator,allocator_env);
 
@@ -447,7 +466,7 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
             if (cc == EOF||cc == 0){
                 return EBM_EOF;
             }
-            //printf("%c\n",cc);
+            //printf("%d\n",cc);
             uintptr_t read_function_apair = EBM_char_table_ref_CA(character_table,cc);
             if (read_function_apair != EBM_FALSE){
                 uintptr_t config_ptr = state->args1[2];
@@ -587,16 +606,28 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
             return EBM_UNDEF;
         }
 
-        if (EBM_IS_SYMBOL_CR(EBM_record_first(object))){
-                EBM_write_cstring_CA("#record=",port);
-                EBM_write_simple(EBM_record_first(object),port);
-                return EBM_UNDEF;
+        if (EBM_record_first(object) == EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE){
+            printf("#<symbol-trie>");//TODO:USE PORT
+            return EBM_UNDEF;
         }
 
-        printf("#<record>");
+        //FOR DEBUG 
+        //USER RECORD
+        if (EBM_IS_SYMBOL_CR(EBM_record_first(object))){
+            EBM_write_cstring_CA("#record=",port);
+            EBM_write_cstring_CA("(",port);
+            int i;
+            for (i=1;i<EBM_record_length_CR(object);i++){
+                EBM_write_simple(EBM_record_ref_CA(object,i),port);
+                EBM_write_char_CA(' ',port);
+            }
+            EBM_write_cstring_CA(")",port);
+            return EBM_UNDEF;
+        }
+        printf("#<record>");//TODO:USE PORT
     }else if (EBM_IS_FX_NUMBER_CR(object)){
         uintptr_t num =  EBM_FX_NUMBER_TO_C_INTEGER_CR(object);
-        printf("%ld",(long int)num);
+        printf("%ld",(long int)num);//TODO:USE PORT
     }else{
         switch (object){
             case EBM_TRUE:
