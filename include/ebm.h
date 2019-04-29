@@ -152,6 +152,7 @@ uintptr_t EBM_vector_primitive_set_CA(uintptr_t vector,size_t index,uintptr_t ob
 
 uintptr_t EBM_allocate_symbol_CA(uint32_t *symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
+uintptr_t EBM_allocate_symbol_no_copy(uint32_t *symbol_data,EBM_GC_INTERFACE *gc_interface);
 #define EBM_IS_SYMBOL_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_SYMBOL))
 
 
