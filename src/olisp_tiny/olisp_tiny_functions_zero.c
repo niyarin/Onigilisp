@@ -47,10 +47,7 @@ uintptr_t OLISP_eq(OLISP_state *state){
         //TODO
     }
 
-    if (state->args1[0] == state->args1[1]){
-        return EBM_TRUE;
-    }
-    return EBM_FALSE;
+    return EBM_eq(state->args1[0],state->args1[1]);
 }
 
 uintptr_t OLISP_vector(OLISP_state *state){

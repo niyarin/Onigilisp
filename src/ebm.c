@@ -10,7 +10,6 @@ uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env){
     return (uintptr_t)res;
 }
 
-
 uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t* pair = (uintptr_t*)allocator(sizeof(uintptr_t) * 2,allocator_env);
     pair[0] = car;
@@ -38,7 +37,6 @@ uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t alloc
     int i;
     for (i=0;i<size;i++){
         res = EBM_allocate_pair(va_arg(ap,uintptr_t),res,allocator,allocator_env);
-        printf("P:%ld\n",EBM_CAR(res));
     }
     va_end(ap);
     return res;
@@ -47,7 +45,6 @@ uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t alloc
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env){
     free((void*)EBM_REMOVE_TYPE(obj));
 }
-
 
 uintptr_t EBM_allocate_record_CA(uint32_t size,EBM_ALLOCATOR allocator,uintptr_t env){
     uintptr_t *res = (uintptr_t*)allocator(sizeof(uintptr_t) * (size+1),env);
@@ -65,7 +62,6 @@ uintptr_t EBM_allocate_record_range_CA(uintptr_t record,uintptr_t left,uintptr_t
     EBM_record_primitive_set_CA(res,5, EBM_allocate_FX_NUMBER_CA(right));
     return res;
 }
-
 
 uintptr_t EBM_vector_re_allocate_CA(uintptr_t vector,uintptr_t new_size,uintptr_t else_fill,EBM_ALLOCATOR allocator,uintptr_t env){
     //一度re_allocateしたオブジェクトは再度re_allocateされる可能性は高そう
@@ -96,14 +92,12 @@ uintptr_t EBM_record_primitive_set_CA(uintptr_t record,size_t index,uintptr_t p)
     return EBM_UNDEF;
 }
 
-
 uintptr_t EBM_record_set_CA(uintptr_t record,size_t index,uintptr_t target_object,EBM_WRITE_BARRIER write_barrier,uintptr_t allocator_env){
     uintptr_t* record_v = (uintptr_t*)EBM_REMOVE_TYPE(record);
     write_barrier(record,target_object,allocator_env);
     record_v[index+1] = target_object;
     return EBM_UNDEF;
 }
-
 
 uintptr_t EBM_record_ref_CA(uintptr_t record,size_t index){
     uintptr_t* record_v = (uintptr_t*)EBM_REMOVE_TYPE(record);
@@ -155,4 +149,8 @@ uintptr_t EBM_object_heap_size_CR(uintptr_t object){
         return sizeof(uintptr_t) * 2;
     }
     return 0;
+}
+
+uintptr_t EBM_eq(uintptr_t a,uintptr_t b){
+    return (a==b)?EBM_TRUE:EBM_FALSE;
 }

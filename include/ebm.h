@@ -186,6 +186,11 @@ uintptr_t EBM_symbol_trie_to_alist(uintptr_t symbol_trie,EBM_ALLOCATOR allocator
 #define EBM_iS_OLISP_FUNCTION_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION ))
 
 //
+//COMPARES
+//
+uintptr_t EBM_eq(uintptr_t a,uintptr_t b);
+
+//
 // OTHERS
 //
 uintptr_t EBM_object_heap_size_CR(uintptr_t object);
