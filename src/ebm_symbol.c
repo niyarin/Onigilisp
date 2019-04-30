@@ -49,6 +49,23 @@ uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocat
     return symbol_record;
 }
 
+uintptr_t EBM_symbol_compare_cstring_CACR(uintptr_t symbol,char* cascii_string){
+    uint32_t *symbol_data = EBM_record_ref_CA(symbol,2);
+
+    int i=0;
+    while (symbol_data[i]&&cascii_string[i]){
+        if (symbol_data[i] != cascii_string[i]){
+            return 0;
+        }
+        i++;
+    }
+
+    if (symbol_data[i] != cascii_string[i]){
+        return 0;
+    }
+    return 1;
+}
+
 
 uintptr_t EBM_allocate_symbol_no_copy(uint32_t *symbol_data,EBM_GC_INTERFACE *gc_interface){
      uintptr_t symbol_record  = EBM_allocate_record_CA(3,gc_interface->allocator,gc_interface->env);
