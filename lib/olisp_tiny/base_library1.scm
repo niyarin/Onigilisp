@@ -1,5 +1,8 @@
+(import (olisp-tiny base-library0))
+
 (define-library (olisp-tiny base-library1)
-   (export caar cadr cdar cddr not)
+   (import (olisp-tiny base-library0))
+   (export caar cadr cdar cddr not null? list)
    (begin
       (define caar
         (lambda (x) (car (car x))))
@@ -17,4 +20,13 @@
         (lambda (x)
           (if (eq? x #f)
             #t
-            #f)))))
+            #f)))
+
+      (define null?
+        (lambda (x)
+          (eq? x '())))
+
+      (define list
+        (lambda x x))
+
+      ))
