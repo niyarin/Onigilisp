@@ -120,6 +120,7 @@ uintptr_t EBM_char_table_set_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM
 
 #define EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER EBM_allocate_FX_NUMBER_CA(29)
 #define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
+#define EBM_BUILT_IN_RECORD_TYPE_HASH_TABLE EBM_allocate_FX_NUMBER_CA(31)
 #define EBM_BUILT_IN_RECORD_TYPE_OLISP_FUNCTION EBM_allocate_FX_NUMBER_CA(52)
 
 //
@@ -191,6 +192,13 @@ uintptr_t EBM_symbol_trie_to_alist(uintptr_t symbol_trie,EBM_ALLOCATOR allocator
 //COMPARES
 //
 uintptr_t EBM_eq(uintptr_t a,uintptr_t b);
+
+//
+//simple hash
+//
+uintptr_t EBM_allocate_simple_hash_table( uintptr_t table_size, EBM_ALLOCATOR allocator, uintptr_t allocator_env);
+uintptr_t EBM_simple_hash_table_set( uintptr_t hash_table, uintptr_t key, uintptr_t value, EBM_GC_INTERFACE *gc_interface);
+uintptr_t EBM_simple_hash_table_ref(uintptr_t hash_table,uintptr_t key);
 
 //
 // OTHERS
