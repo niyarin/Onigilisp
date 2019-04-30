@@ -329,7 +329,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                         lexical_information = 
                                             EBM_allocate_pair(
                                                 EBM_allocate_pair(
-                                                    EBM_CAR(formals),
+                                                    formals,
                                                     args,
                                                     allocator,
                                                     allocator_env),
