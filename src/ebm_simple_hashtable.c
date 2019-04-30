@@ -62,3 +62,39 @@ uintptr_t EBM_simple_hash_table_ref(uintptr_t hash_table,uintptr_t key){
     }
     return EBM_CDR(apair);
 }
+
+uintptr_t EBM_simple_hash_table_delete(uintptr_t hash_table,uintptr_t key,EBM_GC_INTERFACE *gc_interface){
+    uintptr_t table_vector = EBM_record_ref_CA(hash_table,2);
+    uintptr_t hash_value = key % EBM_vector_length_CR(table_vector);
+
+    uintptr_t alist = EBM_vector_ref_CA(table_vector,hash_value);
+    uintptr_t prev_cell = EBM_NULL;
+    while (alist != EBM_NULL){
+        if (EBM_CAAR(alist) == key){
+            break;
+        }
+        
+        prev_cell = alist;
+        alist = EBM_CDR(alist);
+    }
+
+    if (alist == EBM_NULL){
+        return EBM_UNDEF;
+    }
+
+    if (prev_cell == EBM_NULL){
+        EBM_vector_set_CA(
+                table_vector,
+                hash_value,
+                EBM_CDR(alist),
+                gc_interface->write_barrier,
+                gc_interface->env);
+        return EBM_UNDEF;
+    }
+
+    EBM_set_cdr(
+            prev_cell,
+            EBM_CDR(alist),
+            gc_interface);
+    return EBM_UNDEF;
+}

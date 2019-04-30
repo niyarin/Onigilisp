@@ -199,6 +199,7 @@ uintptr_t EBM_eq(uintptr_t a,uintptr_t b);
 uintptr_t EBM_allocate_simple_hash_table( uintptr_t table_size, EBM_ALLOCATOR allocator, uintptr_t allocator_env);
 uintptr_t EBM_simple_hash_table_set( uintptr_t hash_table, uintptr_t key, uintptr_t value, EBM_GC_INTERFACE *gc_interface);
 uintptr_t EBM_simple_hash_table_ref(uintptr_t hash_table,uintptr_t key);
+uintptr_t EBM_simple_hash_table_delete(uintptr_t hash_table,uintptr_t key,EBM_GC_INTERFACE *gc_interface);
 
 //
 // OTHERS
