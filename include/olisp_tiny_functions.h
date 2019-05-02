@@ -5,4 +5,7 @@
 uintptr_t OLISP_car(OLISP_state *state);
 uintptr_t OLISP_cdr(OLISP_state *state);
 uintptr_t OLISP_cons(OLISP_state *state);
+uintptr_t OLISP_eq(OLISP_state *state);
+uintptr_t OLISP_write_simple(OLISP_state *state);
+uintptr_t OLISP_vector(OLISP_state *state);
 #endif
