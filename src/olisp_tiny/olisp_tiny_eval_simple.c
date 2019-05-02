@@ -277,8 +277,10 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                         if (syma == symb){
                             res = EBM_TRUE;
                         }else{
+                            
                             printf("TBA!\n");
-                            exit(1);
+                            //exit(1);
+                            res = EBM_FALSE;//atode
                         }
                     }
                     break;
@@ -431,11 +433,11 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                 eval_info = EBM_NULL;
                                 continue;
                             }else if (EBM_CADR(code) == EBM_FALSE){
-                                code = EBM_CADDR(code);
+                                code = EBM_CADDR(EBM_CDR(code));
                                 eval_info = EBM_NULL;
                                 continue;
                             }else{
-                                code = EBM_CADDR(EBM_CDR(code));
+                                code = EBM_CADDR(code);
                                 eval_info = EBM_NULL;
                                 continue;
                             }
@@ -1125,6 +1127,19 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                 break;
             case SYNTAX_FX_NUMBER_IF:
                 {
+                    if (EBM_CDR(EBM_CDDR(expression)) ==
+                            EBM_NULL){
+                        return 
+                            EBM_allocate_rev_list(
+                                    4,
+                                    gc_interface->allocator,
+                                    gc_interface->env,
+                                    EBM_UNDEF,
+                                    EBM_CADDR(expression),
+                                    EBM_CADR(expression),
+                                    SYNTAX_FX_NUMBER_IF);
+                    }
+
                     return 
                         EBM_allocate_pair(
                                 SYNTAX_FX_NUMBER_IF,
