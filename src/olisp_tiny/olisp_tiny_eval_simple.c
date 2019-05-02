@@ -48,8 +48,9 @@ static uintptr_t _OLISP_allocate_global_ref(uintptr_t addr_fx,uintptr_t original
 static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uintptr_t environment,uintptr_t local_cell,EBM_GC_INTERFACE *gc_interface,OLISP_state *state);
 
 
-static uintptr_t EBM_olisp_tiny_lookup(uintptr_t trie,uintptr_t symbol){
-    return EBM_symbol_trie_ref(trie,symbol);
+static uintptr_t EBM_olisp_tiny_lookup(uintptr_t simple_hash_table,uintptr_t symbol){
+    //return EBM_symbol_trie_ref(trie,symbol);
+    return EBM_simple_hash_table_ref(simple_hash_table,symbol);
 }
 
 //TODO:未完成
@@ -177,7 +178,13 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                res = EBM_UNDEF;
                            }
                         }else{
-                            EBM_olisp_tiny_set_env(eval_environment,EBM_CADR(code),EBM_CADDR(code),gc_interface);
+                            EBM_vector_set_CA(
+                                       global,
+                                       EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(EBM_CADR(code))),
+                                       EBM_CADDR(code),
+                                       gc_interface->write_barrier,
+                                       gc_interface->env);
+
                             res = EBM_UNDEF;
                         }
                     }
@@ -592,6 +599,7 @@ static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,ch
 
     }else if (EBM_IS_VECTOR_CR(code)){
         //TODO;
+        printf("ERR\n");
         exit(1);
     }else if (EBM_IS_SYMBOL_CR(code)){
         uintptr_t expand_env1 = EBM_vector_ref_CA(env1,2);
@@ -676,6 +684,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                          gc_interface,
                          state);
         } else if (EBM_IS_FX_NUMBER_CR(operator)){
+            printf("ERRRRRRRRRR\n");
             //error
             exit(1);//TODO;
         }else if (EBM_IS_SYMBOL_CR(operator)){
@@ -695,7 +704,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                     2);
             new_operator = EBM_olisp_tiny_lookup(expand_environment,operator);
         }
-
         expand_environment = original_expand_environment;
 
         if (EBM_IS_RECORD_CR(new_operator) &&
@@ -814,15 +822,14 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
             uintptr_t ecode = EBM_olisp_eval_simple(to_expand_code, environment,gc_interface,state);
 
-            write(ecode,gc_interface->allocator,gc_interface->env);
-            exit(1);
-            
-            return _EBM_olisp_tiny_expand_simple_internal(
+            uintptr_t expanded_code = 
+                _EBM_olisp_tiny_expand_simple_internal(
                     ecode,
-                    environment,
+                    defined_env,
                     local_cell,
                     gc_interface,
                     state);
+            return expanded_code;
         }
 
         
@@ -1053,7 +1060,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                                 library_env,
                                                 state);
 
-                                    EBM_symbol_trie_set(
+                                    EBM_simple_hash_table_set(
                                             expand_environment,
                                             sym,
                                             ref_object,
@@ -1154,7 +1161,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                 gc_interface,
                                 state);
 
-                    EBM_symbol_trie_set(
+                    EBM_simple_hash_table_set(
                             expand_environment,
                             EBM_CADR(expression),
                             syntax,
@@ -1249,8 +1256,21 @@ uintptr_t EBM_olisp_tiny_expand_simple(uintptr_t expression,uintptr_t environmen
 
 
 
-static uintptr_t EBM_olisp_tiny_set_import_syntax_environment(uintptr_t trie_expand_env,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state){
-    EBM_symbol_trie_set(trie_expand_env, EBM_allocate_symbol_from_cstring_CA("import",gc_interface->allocator,gc_interface->env),SYNTAX_FX_NUMBER_IMPORT,gc_interface);
+static uintptr_t EBM_olisp_tiny_set_import_syntax_environment(uintptr_t expand_env,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state){
+    //EBM_symbol_trie_set(trie_expand_env, EBM_allocate_symbol_from_cstring_CA("import",gc_interface->allocator,gc_interface->env),SYNTAX_FX_NUMBER_IMPORT,gc_interface);
+
+
+    uintptr_t import_symbol = 
+        OLISP_symbol_intern(
+            EBM_allocate_symbol_from_cstring_CA("import",gc_interface->allocator,gc_interface->env),
+            olisp_state);
+
+    EBM_simple_hash_table_set(
+            expand_env,
+            import_symbol,
+            SYNTAX_FX_NUMBER_IMPORT,
+            gc_interface);
+
     return EBM_UNDEF;
 }
 
@@ -1300,12 +1320,15 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
 
     //set expand environment
     {
-        uintptr_t symbol_trie = EBM_allocate_symbol_trie(allocator,allocator_env);
-        //EBM_olisp_tiny_set_default_expand_environtment(symbol_trie,gc_interface);
-        EBM_olisp_tiny_set_import_syntax_environment( symbol_trie, gc_interface,state);
+        uintptr_t hash_table = 
+            EBM_allocate_simple_hash_table(
+                    128,
+                    gc_interface->allocator,
+                    gc_interface->env);
 
-        EBM_vector_set_CA(res,2,symbol_trie,gc_interface->write_barrier,gc_interface->env);
-        
+        EBM_olisp_tiny_set_import_syntax_environment( hash_table, gc_interface,state);
+
+        EBM_vector_set_CA(res,2,hash_table,gc_interface->write_barrier,gc_interface->env);
     }
 
     {//set local env for eval
@@ -1326,6 +1349,7 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
     }
 
     {//global name to address
+        //TODO:hashにしておく
         EBM_vector_primitive_set_CA(
                 res,
                 7,
@@ -1383,7 +1407,7 @@ static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_I
 }
 
 static uintptr_t  _EBM_olisp_tiny_set_library0_syntax(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
-    uintptr_t trie_expand_env = 
+    uintptr_t expand_env = 
         EBM_vector_ref_CA(
                 environment,
                 2);
@@ -1403,8 +1427,11 @@ static uintptr_t  _EBM_olisp_tiny_set_library0_syntax(uintptr_t environment,EBM_
                     exports,
                     gc_interface->allocator,
                     gc_interface->env);
-
-        EBM_symbol_trie_set(trie_expand_env,sym,EBM_allocate_FX_NUMBER_CA(i),gc_interface);
+        EBM_simple_hash_table_set(
+                expand_env,
+                sym,
+                EBM_allocate_FX_NUMBER_CA(i),
+                gc_interface);
     }
 
     EBM_vector_set_CA(
@@ -1430,4 +1457,3 @@ uintptr_t EBM_olisp_tiny_set_library0(uintptr_t environment,EBM_GC_INTERFACE *gc
 
     return EBM_UNDEF;
 }
-
