@@ -4,7 +4,7 @@
    (import 
      (olisp-tiny base-library0)
      (olisp-tiny base-library1))
-   (export else => and)
+   (export cond else => and when)
    (begin
       (define-syntax let1 ;(let1 (bind object) body)
         (ir-macro-transformer
@@ -28,7 +28,7 @@
                   (list 'not (cadr expression))
                   #f
                   (cons 'and (cddr expression))))))))
-
+      
    
       (define-syntax 
         else
@@ -41,4 +41,38 @@
         (if-macro-transformer
           (lambda (expression inject compare?)
             #t)))
+
+      (define-syntax cond
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (if (compare? (car (cadr expression)) 'else)
+              (cons 'begin (cdr (cadr expression)))
+              (if (and 
+                    (not (null? (cdr (cadr expression))))
+                    (compare? (cadr (cadr expression)) '=>))
+                (list
+                  'let1
+                  (list 'tmp (car (cadr expression)))
+                  (list 
+                    'if
+                    'tmp
+                    (list (cadr (cdr (cadr expression))) 'tmp)
+                    (cons 'cond (cddr expression))))
+                (list 
+                  'if 
+                  (car (cadr expression))
+                  (cons 'begin (cdr (cadr expression)))
+                  (cons 'cond (cddr expression))))
+              ))))
+
+      (define-syntax when
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (list 
+              'if
+              (cadr expression)
+              (cons
+                'begin
+                (cddr expression))))))
+                
       ))
