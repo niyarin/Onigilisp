@@ -28,17 +28,19 @@ uintptr_t EBM_simple_hash_table_set(
     
     uintptr_t table_vector = EBM_record_ref_CA(hash_table,2);
     uintptr_t hash_value = key % EBM_vector_length_CR(table_vector);
-
     uintptr_t alist = EBM_vector_ref_CA(table_vector,hash_value);
-    
     uintptr_t apair = EBM_assq(key,alist);
     if (apair == EBM_FALSE){
         EBM_vector_set_CA(
                 table_vector,
                 hash_value,
                 EBM_allocate_pair(
-                    key,
-                    value,
+                    EBM_allocate_pair(
+                        key,
+                        value,
+                        gc_interface->allocator,
+                        gc_interface->env),
+                    alist,
                     gc_interface->allocator,
                     gc_interface->env),
                 gc_interface->write_barrier,
@@ -55,7 +57,6 @@ uintptr_t EBM_simple_hash_table_ref(uintptr_t hash_table,uintptr_t key){
     uintptr_t hash_value = key % EBM_vector_length_CR(table_vector);
 
     uintptr_t alist = EBM_vector_ref_CA(table_vector,hash_value);
-    
     uintptr_t apair = EBM_assq(key,alist);
     if (apair == EBM_FALSE){
         return EBM_UNDEF;//?? 
