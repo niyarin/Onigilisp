@@ -7,6 +7,8 @@
 
 #include<stdio.h>
 
+#define OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME 13
+
 #define SYNTAX_FX_NUMBER_DEFINE EBM_allocate_FX_NUMBER_CA(0)
 #define SYNTAX_FX_NUMBER_LAMBDA EBM_allocate_FX_NUMBER_CA(1)
 #define SYNTAX_FX_NUMBER_IF EBM_allocate_FX_NUMBER_CA(2)
@@ -26,8 +28,7 @@
 
 #define OLISP_TINY_CLOSUR_FX_NUMBER EBM_allocate_FX_NUMBER_CA(2)
 
-
-#define _OLISP_CAN_EVAL(x) (EBM_IS_PAIR_CR(x) || EBM_IS_SYMBOL_CR(x))
+#define OLISP_TINY_SIMPLE_CAN_EVAL(x) (EBM_IS_PAIR_CR(x) || EBM_IS_SYMBOL_CR(x))
 
 //DEBUG #####################################################
 
@@ -148,7 +149,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
             switch(operator){
                 case SYNTAX_FX_NUMBER_DEFINE:
                     {
-                        if (_OLISP_CAN_EVAL(EBM_CADDR(code))){
+                        if (OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CADDR(code))){
                             if (EBM_NULL == eval_info){
                                stack = EBM_allocate_pair(
                                            EBM_allocate_rev_list(
@@ -238,7 +239,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                             res = EBM_CADR(eval_info);
                             eval_info = EBM_NULL;
                         }else{
-                           if (_OLISP_CAN_EVAL(EBM_CAAR(eval_info))){
+                           if (OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CAAR(eval_info))){
                                 stack = EBM_allocate_pair(
                                    EBM_allocate_rev_list(
                                        4,
@@ -364,7 +365,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                 eval_info = EBM_NULL;
                                 continue;
                             }
-                        }else if _OLISP_CAN_EVAL(EBM_CAR(eval_info)){
+                        }else if OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CAR(eval_info)){
                            stack = EBM_allocate_pair(
                                        EBM_allocate_rev_list(
                                            4,
@@ -408,7 +409,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                 case SYNTAX_FX_NUMBER_IF:
                     {
                         if (eval_info == EBM_NULL){
-                            if (_OLISP_CAN_EVAL(EBM_CADR(code))){
+                            if (OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CADR(code))){
                                 eval_info =
                                     EBM_allocate_pair(
                                             EBM_CADR(code),
@@ -1380,13 +1381,10 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
 
 
 
-static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
-    char fnames[][13] = {"cons","car","cdr","eq?","write-simple","vector"};
-    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector};
-
+static uintptr_t _EBM_olisp_tiny_set_fun_to_environment(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state,char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME],OLISP_cfun* olisp_cfuns,int number_of_function){
     int i;
     uintptr_t exports = EBM_vector_ref_CA(environment,5);
-    for (i=0;i<6;i++){
+    for (i=0;i<number_of_function;i++){
         uintptr_t function_name_symbol = 
                     EBM_allocate_symbol_from_cstring_CA(fnames[i],gc_interface->allocator,gc_interface->env);
         
@@ -1418,6 +1416,27 @@ static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_I
             exports,
             gc_interface->write_barrier,
             gc_interface->env);
+    return EBM_UNDEF;
+
+}
+
+static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
+    char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
+            = {"cons","car","cdr","eq?","write-simple","vector"};
+
+    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector};
+
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],6);
+    return EBM_UNDEF;
+}
+
+static uintptr_t _EBM_olisp_tiny_set_fxnumber_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
+    char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
+            = {"fx+"};
+
+    OLISP_cfun olisp_cfuns[] = {OLISP_fx_add};
+
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],1);
     return EBM_UNDEF;
 }
 
@@ -1469,6 +1488,10 @@ uintptr_t EBM_olisp_tiny_set_library0(uintptr_t environment,EBM_GC_INTERFACE *gc
             gc_interface,
             state);
 
+    _EBM_olisp_tiny_set_fxnumber_fun(
+            environment,
+            gc_interface,
+            state);
 
     return EBM_UNDEF;
 }
