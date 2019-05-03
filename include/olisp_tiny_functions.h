@@ -8,4 +8,13 @@ uintptr_t OLISP_cons(OLISP_state *state);
 uintptr_t OLISP_eq(OLISP_state *state);
 uintptr_t OLISP_write_simple(OLISP_state *state);
 uintptr_t OLISP_vector(OLISP_state *state);
+
+//
+uintptr_t OLISP_fx_add(OLISP_state *state);
+
+
+//
+uintptr_t OLISP_record_ref(OLISP_state *state);
+uintptr_t OLISP_record_p(OLISP_state *state);
+
 #endif

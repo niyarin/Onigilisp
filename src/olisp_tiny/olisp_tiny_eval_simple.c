@@ -1440,6 +1440,16 @@ static uintptr_t _EBM_olisp_tiny_set_fxnumber_fun(uintptr_t environment,EBM_GC_I
     return EBM_UNDEF;
 }
 
+static uintptr_t _EBM_olisp_tiny_set_base_aux_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
+    char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
+            = {"record-ref","record?"};
+
+    OLISP_cfun olisp_cfuns[] = {OLISP_record_ref,OLISP_record_p};
+
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],2);
+    return EBM_UNDEF;
+}
+
 static uintptr_t  _EBM_olisp_tiny_set_library0_syntax(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     uintptr_t expand_env = 
         EBM_vector_ref_CA(
@@ -1489,6 +1499,11 @@ uintptr_t EBM_olisp_tiny_set_library0(uintptr_t environment,EBM_GC_INTERFACE *gc
             state);
 
     _EBM_olisp_tiny_set_fxnumber_fun(
+            environment,
+            gc_interface,
+            state);
+
+     _EBM_olisp_tiny_set_base_aux_fun(
             environment,
             gc_interface,
             state);
