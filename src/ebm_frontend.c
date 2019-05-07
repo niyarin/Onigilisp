@@ -268,6 +268,15 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
     exit(1);
 }
 
+static uintptr_t _symbol_intern(uintptr_t symbol,OLISP_state *state){
+    uintptr_t trie = state->symbol_intern;
+    uintptr_t res = EBM_symbol_trie_ref(trie,symbol);
+    if (res == EBM_UNDEF){
+        EBM_symbol_trie_set(trie,symbol,symbol,state->gc_interface);   
+        return symbol;
+    }
+    return res;
+}
 
 uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
     //printf("::::::::::::::::::::::::::::::::::::[RPAREN]\n");
@@ -313,8 +322,10 @@ uintptr_t OLISP_read_function_read_quote(OLISP_state *state){
 
     uintptr_t object = OLISP_cfun_call(state,OLISP_read1_with_character_table,3,port,reader_config->read_function_table,reader_config_ptr);
     
+    uintptr_t quote_symbol = EBM_allocate_symbol_from_cstring_CA("quote",state->allocator,state->allocator_env);
+    quote_symbol = _symbol_intern(quote_symbol,state);
 
-    uintptr_t res = EBM_allocate_pair(EBM_allocate_symbol_from_cstring_CA("quote",state->allocator,state->allocator_env),
+    uintptr_t res = EBM_allocate_pair(quote_symbol,
                                       EBM_allocate_pair(object,EBM_NULL,state->allocator,state->allocator_env),
                                       state->allocator,state->allocator_env);
     return res;
@@ -328,7 +339,7 @@ uintptr_t OLISP_read_function_read_semi_colon(OLISP_state *state){
         OLISP_reader_config *reader_config = (OLISP_reader_config*)(EBM_pointer_box_ref_CR(reader_config_ptr));
 
         uint32_t cc;
-        while (1){
+        while (1){//TODO:CHECK EOF
            cc = EBM_read_char_CR(port);
            if (cc =='\n'){
                break;
@@ -386,7 +397,6 @@ uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
     exit(1);
 }
 
-
 uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     //TODO:あとでprimitiveを取る
     uintptr_t res = EBM_char_table_create_CA(128,0,allocator,allocator_env);
@@ -401,7 +411,6 @@ uintptr_t EBM_frontend_create_default_reader_table(EBM_ALLOCATOR allocator,uintp
     EBM_char_table_primitive_insert_CA(res,';',OLISP_create_function_for_ebm(OLISP_read_function_read_semi_colon,allocator,allocator_env),allocator,allocator_env);
 
     EBM_char_table_primitive_insert_CA(res,'#',OLISP_create_function_for_ebm(OLISP_read_function_read_dispatch_pattern,allocator,allocator_env),allocator,allocator_env);
-
 
     EBM_char_table_primitive_insert_CA(res,'\'',OLISP_create_function_for_ebm(OLISP_read_function_read_quote,allocator,allocator_env),allocator,allocator_env);
     return res;
@@ -420,22 +429,30 @@ uintptr_t EBM_frontend_create_default_dispatch_table(EBM_ALLOCATOR allocator,uin
     return res;
 }
 
-static uintptr_t _symbol_intern(uintptr_t symbol,OLISP_state *state){
-    uintptr_t trie = state->symbol_intern;
-    uintptr_t res = EBM_symbol_trie_ref(trie,symbol);
-    if (res == EBM_UNDEF){
-        EBM_symbol_trie_set(trie,symbol,symbol,state->gc_interface);   
-        return symbol;
+static uintptr_t _EBM_analyze_token_uinteger10(uint32_t *token_string,uintptr_t *current_index){
+    uintptr_t res = 0;
+    int i=*current_index;
+    while (token_string[i]){
+        if ('0' <= token_string[i] && token_string[i] <= '9'){
+            res = res * 10 + (token_string[i] - '0');
+        }
+        i++;
     }
-    return res;
+    return EBM_allocate_FX_NUMBER_CA(res);
 }
 
-static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t max_length,OLISP_state *state){
+static uintptr_t _EBM_analyze_token(uint32_t **token_string_ptr,size_t length,size_t max_length,OLISP_state *state){
+   
     if (length == max_length){
-        token_string = (uint32_t*)realloc(token_string,sizeof(uint32_t) * (max_length + 1));
+        *token_string_ptr = (uint32_t*)realloc(*token_string_ptr,sizeof(uint32_t) * (max_length + 1));
     }
+    uint32_t *token_string = *token_string_ptr;
     token_string[length]  = 0;
-    
+
+    uintptr_t current_index = 0;
+    if ('0' <= token_string[0]  && token_string[0] <= '9'){
+        return _EBM_analyze_token_uinteger10(token_string,&current_index);
+    }
     
     EBM_ALLOCATOR allocator = state->allocator;
     uintptr_t allocator_env = state->allocator_env;
@@ -444,7 +461,6 @@ static uintptr_t _EBM_analyze_token(uint32_t *token_string,size_t length,size_t 
             state);
 
 }
-
 
 uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
     if (state->arg_size >= 3){
@@ -455,7 +471,6 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
         if (state->arg_size >= 4){
             delim_cc = EBM_char2unicode_CR(state->args1[3]);
         }
-    
         
         size_t token_max_length = 8;
         uint32_t *token_string = (uint32_t*)malloc(sizeof(uint32_t)*token_max_length);
@@ -472,7 +487,10 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
                 uintptr_t config_ptr = state->args1[2];
                 if (token_length != 0){
                     EBM_ungetc(cc,port);
-                    return _EBM_analyze_token(token_string,token_length,token_max_length,state);
+                    uintptr_t res = _EBM_analyze_token(&token_string,token_length,token_max_length,state);
+                    free(token_string);
+                    return res;
+                  
                 }
 
                 if (delim_cc){
@@ -486,14 +504,13 @@ uintptr_t OLISP_read1_with_character_table(OLISP_state *state){
             }
 
             {
-                if (token_length > token_max_length){
+                if (token_length >= token_max_length){
                     token_max_length+=8;
                     token_string = (uint32_t*)realloc((void*)token_string,sizeof(uint32_t)*token_max_length);
                 }
                 token_string[token_length] = cc;
                 token_length++;
             }
-
         }
     }
 }
@@ -615,12 +632,15 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
         //USER RECORD
         if (EBM_IS_SYMBOL_CR(EBM_record_first(object))){
             EBM_write_cstring_CA("#record=",port);
+            EBM_write_simple(EBM_record_first(object),port);
+            /*
             EBM_write_cstring_CA("(",port);
             int i;
             for (i=1;i<EBM_record_length_CR(object);i++){
                 EBM_write_simple(EBM_record_ref_CA(object,i),port);
                 EBM_write_char_CA(' ',port);
             }
+            */
             EBM_write_cstring_CA(")",port);
             return EBM_UNDEF;
         }
