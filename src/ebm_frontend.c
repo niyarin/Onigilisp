@@ -260,11 +260,25 @@ uintptr_t OLISP_read_function_read_list(OLISP_state *state){
             if (lobject == EBM_DUMMY_OBJECT){
                 break;
             }
+
+            if (EBM_IS_SYMBOL_CR(lobject) 
+                    && ((uint32_t*)EBM_record_ref_CA(lobject,2))[0] == '.'
+                    && ((uint32_t*)EBM_record_ref_CA(lobject,2))[1] == '\0'){
+                EBM_PRIMITIVE_SET_CDR(
+                        cell,
+                        OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,EBM_allocate_character_CA(')')));
+
+
+                OLISP_cfun_call(state,OLISP_read1_with_character_table,4,port,reader_config->read_function_table,reader_config_ptr,EBM_allocate_character_CA(')'));//read rparen
+                break;
+            }
+
             EBM_PRIMITIVE_SET_CDR(cell,EBM_allocate_pair(lobject,EBM_NULL,state->allocator,state->allocator_env));
             cell = EBM_CDR(cell);
         }
         return EBM_CDR(res_top_cell);
     }
+    printf("ERR%s %d \n",__FILE__,__LINE__);
     exit(1);
 }
 
@@ -280,6 +294,7 @@ static uintptr_t _symbol_intern(uintptr_t symbol,OLISP_state *state){
 
 uintptr_t OLISP_read_function_read_rparen(OLISP_state *state){
     //printf("::::::::::::::::::::::::::::::::::::[RPAREN]\n");
+    printf("ERR%s %d \n",__FILE__,__LINE__);
     exit(1);
     return EBM_NULL;
 }
@@ -367,6 +382,7 @@ uintptr_t OLISP_read_function_read_dispatch_pattern(OLISP_state *state){
             return OLISP_cfun_call(state,OLISP_fun_call,5,read_function,port,EBM_allocate_character_CA(cc),EBM_allocate_character_CA(cc2),reader_config_ptr);
         }
     }
+    printf("ERR%s %d \n",__FILE__,__LINE__);
     exit(1);
 }
 
@@ -394,6 +410,7 @@ uintptr_t OLISP_read_dispatch_function_read_boolean(OLISP_state *state){
         //printf("::::::::::::::::::::[read false]\n");
         return EBM_FALSE;
     }
+    printf("ERR%s %d \n",__FILE__,__LINE__);
     exit(1);
 }
 
@@ -662,7 +679,6 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
             case EBM_UNDEF:
                 EBM_write_cstring_CA("#<UNDEF>",port);
                 return EBM_UNDEF;
-
         }
     }
 }
