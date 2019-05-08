@@ -4,7 +4,7 @@
    (import 
      (olisp-tiny base-library0)
      (olisp-tiny base-library1))
-   (export cond else => and when)
+   (export cond else => and when (rename define2 define))
    (begin
       (define-syntax let1 ;(let1 (bind object) body)
         (ir-macro-transformer
@@ -74,5 +74,21 @@
               (cons
                 'begin
                 (cddr expression))))))
-                
+
+
+      (define-syntax define2;Add support define syntax sugar.
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (if (pair? (cadr expression))
+              (list 
+                'define 
+                (car (cadr expression))
+                (cons 
+                  'lambda
+                  (cons 
+                     (cdr (cadr expression))
+                     (cddr expression))))
+              (cons
+                'define
+                (cdr expression))))))
       ))
