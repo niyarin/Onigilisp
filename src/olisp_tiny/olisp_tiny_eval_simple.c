@@ -50,7 +50,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
 
 static uintptr_t EBM_olisp_tiny_lookup(uintptr_t simple_hash_table,uintptr_t symbol){
-    //return EBM_symbol_trie_ref(trie,symbol);
     return EBM_simple_hash_table_ref(simple_hash_table,symbol);
 }
 
@@ -80,9 +79,6 @@ static uintptr_t EBM_olisp_tiny_lookup_rec(uintptr_t trie,uintptr_t symbol){
     return EBM_olisp_tiny_lookup_rec(trie,res);
 }
 
-static uintptr_t EBM_olisp_tiny_set_env(uintptr_t trie,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface){
-    return EBM_symbol_trie_set(trie,symbol,object,gc_interface);
-}
 
 static uintptr_t EBM_olisp_tiny_reverse_simple_function(uintptr_t list,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t cell = list;
@@ -142,7 +138,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
     uintptr_t eval_info = EBM_NULL;// (次の評価 . 評価済み)
     uintptr_t lexical_information = EBM_vector_ref_CA(environment,3);
     uintptr_t global = EBM_CAR(EBM_vector_ref_CA(environment,8));
-
+    
     while (stack != EBM_NULL ||  code != EBM_NULL){
         if (EBM_IS_PAIR_CR(code)){
             uintptr_t operator = EBM_CAR(code);
@@ -318,6 +314,15 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                 cell = EBM_CDR(cell);
                             }
                             uintptr_t fun =  OLISP_get_arg(olisp_state,0);
+                            if (!EBM_IS_RECORD_CR(fun)){
+                                //TODO;
+                                write(fun,allocator,allocator_env);
+                                write(code,allocator,allocator_env);
+                                printf("ERROR::%s %d\n",__FILE__,__LINE__);
+                                exit(1);
+                            }
+
+
                             if (EBM_record_ref_CA(fun,1) == 0){
                                 uintptr_t _res = OLISP_fun_call(olisp_state);
                                 res = _res;
@@ -546,22 +551,22 @@ static uintptr_t _EBM_olisp_aux_recursive_expand_simple(uintptr_t expression,uin
             gc_interface->env);
 }
 
-static uintptr_t _EBM_olisp_tiny_eval_define(uintptr_t environment,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface,OLISP_state* state){
+static uintptr_t _EBM_olisp_tiny_eval_define(uintptr_t environment,uintptr_t symbol,uintptr_t object,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
 
-    uintptr_t address_trie = 
+    uintptr_t address_hash = 
         EBM_vector_ref_CA(environment,7);
 
     uintptr_t global_ref = 
-        EBM_symbol_trie_ref(
-                address_trie,
+        EBM_simple_hash_table_ref(
+                address_hash,
                 symbol);
     if (global_ref == EBM_UNDEF){
         uintptr_t address_box =
             EBM_vector_ref_CA(environment,6);
         global_ref = _OLISP_allocate_global_ref(EBM_CAR(address_box),symbol,state);
         EBM_PRIMITIVE_SET_CAR(address_box,EBM_FX_ADD(EBM_CAR(address_box),EBM_allocate_FX_NUMBER_CA(1)));
-        EBM_symbol_trie_set(
-                address_trie,
+        EBM_simple_hash_table_set(
+                address_hash,
                 symbol,
                 global_ref,
                 gc_interface);
@@ -576,9 +581,7 @@ static uintptr_t _EBM_olisp_tiny_eval_define(uintptr_t environment,uintptr_t sym
     return EBM_UNDEF;
 }
 
-
-
-static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,char rev_flag,uintptr_t env1,uintptr_t env2,EBM_GC_INTERFACE *gc_interface){
+static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,char rev_flag,uintptr_t env1,uintptr_t env2,uintptr_t local1,uintptr_t local2,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     
     if (EBM_IS_PAIR_CR(code)){
         return 
@@ -589,14 +592,20 @@ static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,ch
                     rev_flag,
                     env1,
                     env2,
-                    gc_interface),
+                    local1,
+                    local2,
+                    gc_interface,
+                    state),
                 _EBM_olisp_tiny_renaming(
                     EBM_CDR(code),
                     alist_wrap,
                     rev_flag,
                     env1,
                     env2,
-                    gc_interface),
+                    local1,
+                    local2,
+                    gc_interface,
+                    state),
                 gc_interface->allocator,
                 gc_interface->env);
 
@@ -607,15 +616,24 @@ static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,ch
     }else if (EBM_IS_SYMBOL_CR(code)){
         uintptr_t expand_env1 = EBM_vector_ref_CA(env1,2);
         uintptr_t expand_env2 = EBM_vector_ref_CA(env2,2);
-            
-        if (EBM_olisp_tiny_lookup_rec(expand_env1,code) == 
-            EBM_olisp_tiny_lookup_rec(expand_env2,code)){
+         
+        uintptr_t lookup_res1 = EBM_olisp_tiny_lookup_rec(expand_env1,code);
+        uintptr_t lookup_res2 = EBM_olisp_tiny_lookup_rec(expand_env2,code);
+
+        //TODO:localも調べる
+
+        if (lookup_res1 == lookup_res2
+            && lookup_res1 != EBM_UNDEF){
             return code;
         }
 
+        if (lookup_res1 == EBM_UNDEF){
+            _EBM_olisp_tiny_eval_define(env1,code,EBM_UNDEF,gc_interface,state);
+        }
 
         uintptr_t alist = EBM_CAR(alist_wrap);
         if (rev_flag){
+            printf("ERR%s %d \n",__FILE__,__LINE__);
             exit(1);
             //TODO;
         }else{
@@ -769,14 +787,15 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
 
             uintptr_t defined_env = EBM_record_third(new_operator);
+            uintptr_t alist_wrap = 
+                EBM_allocate_pair(
+                        EBM_NULL,
+                        EBM_NULL,
+                        gc_interface->allocator,
+                        gc_interface->env);
+
             if (defined_env != environment){
                 //locals
-                uintptr_t alist_wrap = 
-                    EBM_allocate_pair(
-                            EBM_NULL,
-                            EBM_NULL,
-                            gc_interface->allocator,
-                            gc_interface->env);
                 expression = 
                     _EBM_olisp_tiny_renaming(
                             expression,
@@ -784,7 +803,52 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                             0,
                             environment,
                             defined_env,
-                            gc_interface);
+                            local_cell,
+                            EBM_record_ref_CA(new_operator,3),
+                            gc_interface,
+                            state);
+                uintptr_t cell = EBM_CAR(alist_wrap);
+                while (cell != EBM_NULL){
+                    uintptr_t original_symbol = EBM_CAAR(cell);
+                    uintptr_t renamed_symbol = EBM_CDAR(cell);
+
+                    uintptr_t reference_object =  //TODO:あとで変数名調整
+                        _EBM_olisp_tiny_expand_simple_internal(
+                                original_symbol,
+                                environment,
+                                local_cell,
+                                gc_interface,
+                                state);
+
+                EBM_simple_hash_table_set(
+                        EBM_vector_ref_CA(defined_env,7),
+                        renamed_symbol,
+                        reference_object,
+                        gc_interface);
+
+                    {//TODO:あとでリファクタリング
+                        //TODO:セットしたrenamed_symbolの削除
+                        //TODO:renameを戻す
+                        
+                        uintptr_t namespace_reference_object =  
+                            _OLISP_allocate_namespace_ref(
+                                                original_symbol,
+                                                environment,
+                                                state);
+
+                        EBM_simple_hash_table_set(
+                                EBM_vector_ref_CA(
+                                    defined_env,
+                                    2),
+                                renamed_symbol,
+                                namespace_reference_object,
+                                gc_interface);
+                        
+                     
+                    }
+
+                    cell = EBM_CDR(cell);
+                }
             }
 
             //TO QUOTE
@@ -850,7 +914,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                             local_cell,
                             gc_interface,
                             state);
-
+                    
                     uintptr_t exp = _EBM_olisp_tiny_expand_simple_internal(EBM_CADDR(expression),environment,local_cell, gc_interface,state);
                     return EBM_allocate_rev_list(3,
                             gc_interface->allocator,
@@ -1054,43 +1118,68 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                         library_env,
                                         5);
                             while (exports != EBM_NULL){
-                                uintptr_t sym = EBM_CAR(exports);
-                                if (EBM_IS_SYMBOL_CR(sym)){
+                                uintptr_t def_sym = EBM_CAR(exports);
+                                uintptr_t export_sym = EBM_CAR(exports);
+
+                                if (EBM_IS_SYMBOL_CR(def_sym)){
                                     //TODO:global refに変更
+
+
+                                }else if (EBM_IS_PAIR_CR(def_sym) &&
+                                            EBM_IS_SYMBOL_CR(EBM_CAR(def_sym))
+                                            && EBM_IS_PAIR_CR(EBM_CDR(def_sym))
+                                            && EBM_IS_SYMBOL_CR(EBM_CADR(def_sym))
+                                            && EBM_IS_PAIR_CR(EBM_CDDR(def_sym))
+                                            && EBM_IS_SYMBOL_CR(EBM_CADR(EBM_CDR(def_sym)))
+                                            && EBM_CAR(def_sym) == 
+                                                OLISP_symbol_intern(
+                                                        EBM_allocate_symbol_from_cstring_CA(
+                                                            "rename",
+                                                            state->allocator,
+                                                            state->allocator_env),
+                                                        state)){
+                                    export_sym = EBM_CADR(EBM_CDR(def_sym));
+                                    def_sym = EBM_CADR(def_sym);
+                                }else{
+                                    printf("ERROR %s %d\n",__FILE__,__LINE__);
+                                    exit(1);
+                                }
+
+
+                                {
                                     uintptr_t ref_object =  
                                         _OLISP_allocate_namespace_ref(
-                                                sym,
+                                                def_sym,
                                                 library_env,
                                                 state);
 
                                     EBM_simple_hash_table_set(
                                             expand_environment,
-                                            sym,
+                                            export_sym,
                                             ref_object,
                                             gc_interface);
                                     
                                     uintptr_t eval_global_ref =
                                         _EBM_olisp_tiny_expand_simple_internal(
-                                            sym,
+                                            def_sym,
                                             library_env,
                                             local_cell,
                                             gc_interface,
                                             state);
                                             
-
-
                                     _EBM_olisp_tiny_eval_define(
                                             environment,
-                                            sym,
+                                            export_sym,
                                             eval_global_ref,
                                             gc_interface,
                                             state);
-                                }else{
-                                    //sorry
-                                    //TODO:export rename考慮
-                                    printf("SORRY\n");
-                                    exit(1);
                                 }
+
+
+
+
+
+
                                 exports = EBM_CDR(exports);
                             }
                         }else{
@@ -1232,11 +1321,11 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
         if (!hit){
             //global reference
-            uintptr_t address_trie = EBM_vector_ref_CA(environment,7);
+            uintptr_t address_hash = EBM_vector_ref_CA(environment,7);
 
             uintptr_t global_ref = 
-                EBM_symbol_trie_ref(
-                        address_trie,
+                EBM_simple_hash_table_ref(
+                        address_hash,
                         expression);
             
             if (global_ref == EBM_UNDEF){
@@ -1245,8 +1334,8 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                 global_ref = _OLISP_allocate_global_ref(EBM_CAR(address_box),expression,state);
                 EBM_PRIMITIVE_SET_CAR(address_box,EBM_FX_ADD(EBM_CAR(address_box),EBM_allocate_FX_NUMBER_CA(1)));
 
-                EBM_symbol_trie_set(
-                        address_trie,
+                EBM_simple_hash_table_set(
+                        address_hash,
                         expression,
                         global_ref,
                         gc_interface);
@@ -1260,6 +1349,8 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
         return EBM_TRUE;
     }else if (expression == EBM_FALSE){
         return EBM_FALSE;
+    }else if (EBM_IS_FX_NUMBER_CR(expression)){
+        return expression;
     }else{
         printf("WHO ARE YOU??? [%ld]\n",(long int)expression);
         exit(1);
@@ -1273,7 +1364,6 @@ uintptr_t EBM_olisp_tiny_expand_simple(uintptr_t expression,uintptr_t environmen
 
 
 static uintptr_t EBM_olisp_tiny_set_import_syntax_environment(uintptr_t expand_env,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state){
-    //EBM_symbol_trie_set(trie_expand_env, EBM_allocate_symbol_from_cstring_CA("import",gc_interface->allocator,gc_interface->env),SYNTAX_FX_NUMBER_IMPORT,gc_interface);
 
 
     uintptr_t import_symbol = 
@@ -1365,11 +1455,15 @@ uintptr_t EBM_allocate_olisp_tiny_eval_simple_environment(EBM_GC_INTERFACE *gc_i
     }
 
     {//global name to address
-        //TODO:hashにしておく
+
         EBM_vector_primitive_set_CA(
                 res,
                 7,
-                EBM_allocate_symbol_trie(gc_interface->allocator,gc_interface->env));
+                EBM_allocate_simple_hash_table(
+                    128,
+                    gc_interface->allocator,
+                    gc_interface->env)
+                );
     }
 
     {//globals
@@ -1422,11 +1516,11 @@ static uintptr_t _EBM_olisp_tiny_set_fun_to_environment(uintptr_t environment,EB
 
 static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"cons","car","cdr","eq?","write-simple","vector"};
+            = {"cons","car","cdr","eq?","write-simple","vector","pair?"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector};
+    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],6);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],7);
     return EBM_UNDEF;
 }
 
@@ -1442,11 +1536,11 @@ static uintptr_t _EBM_olisp_tiny_set_fxnumber_fun(uintptr_t environment,EBM_GC_I
 
 static uintptr_t _EBM_olisp_tiny_set_base_aux_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"record-ref","record?"};
+            = {"record-ref","record?","make-record"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_record_ref,OLISP_record_p};
+    OLISP_cfun olisp_cfuns[] = {OLISP_record_ref,OLISP_record_p,OLISP_make_record};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],2);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],3);
     return EBM_UNDEF;
 }
 
