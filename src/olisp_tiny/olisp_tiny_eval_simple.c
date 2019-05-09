@@ -572,6 +572,15 @@ static uintptr_t _EBM_olisp_tiny_eval_define(uintptr_t environment,uintptr_t sym
                 gc_interface);
     }
     uintptr_t global = EBM_CAR(EBM_vector_ref_CA(environment,8));
+    if (EBM_vector_length_CR(global) <= EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(global_ref))){
+    
+        global = EBM_vector_re_allocate_CA(global,EBM_vector_length_CR(global) * 2,EBM_UNDEF, gc_interface->allocator,gc_interface->env);
+        EBM_set_car(
+                EBM_vector_ref_CA(environment,8),
+                global,
+                gc_interface);
+    }
+
     EBM_vector_set_CA(
             global,
             EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(global_ref)),
@@ -633,9 +642,11 @@ static uintptr_t _EBM_olisp_tiny_renaming(uintptr_t code,uintptr_t alist_wrap,ch
 
         uintptr_t alist = EBM_CAR(alist_wrap);
         if (rev_flag){
-            printf("ERR%s %d \n",__FILE__,__LINE__);
-            exit(1);
-            //TODO;
+            uintptr_t apair = EBM_rassq(code,alist);
+            if (EBM_IS_PAIR_CR(apair)){
+                return EBM_CAR(apair);
+            }
+            return code;
         }else{
             uintptr_t apair = EBM_assq(code,alist);
             if (apair == EBM_FALSE){
@@ -889,6 +900,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
             uintptr_t ecode = EBM_olisp_eval_simple(to_expand_code, environment,gc_interface,state);
 
+
             uintptr_t expanded_code = 
                 _EBM_olisp_tiny_expand_simple_internal(
                     ecode,
@@ -896,6 +908,17 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                     local_cell,
                     gc_interface,
                     state);
+            expanded_code = 
+                _EBM_olisp_tiny_renaming(
+                        expanded_code,
+                        alist_wrap,
+                        1,
+                        environment,
+                        defined_env,
+                        local_cell,
+                        EBM_record_ref_CA(new_operator,3),
+                        gc_interface,
+                        state);
             return expanded_code;
         }
 
