@@ -22,6 +22,9 @@
 #define SYNTAX_FX_NUMBER_IR_MACRO_TRANSFORMER  EBM_allocate_FX_NUMBER_CA(10)
 #define SYNTAX_FX_NUMBER_DEFINE_SYNTAX  EBM_allocate_FX_NUMBER_CA(11)
 
+
+#define SYNTAX_FX_NUMBER_SYNTACTIC_LSET EBM_allocate_FX_NUMBER_CA(97)
+
 #define SYNTAX_FX_NUMBER_SYNTACTIC_QUOTE EBM_allocate_FX_NUMBER_CA(98)
 #define SYNTAX_FX_NUMBER_COMPARE_SYMBOL EBM_allocate_FX_NUMBER_CA(99)
 #define SYNTAX_FX_NUMBER_FRUN EBM_allocate_FX_NUMBER_CA(100)
@@ -186,6 +189,58 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                         }
                     }
                     break;
+                case SYNTAX_FX_NUMBER_SYNTACTIC_LSET:
+                    {
+                        if (OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CADDR(code))){
+                            if (EBM_NULL == eval_info){
+                               stack = EBM_allocate_pair(
+                                           EBM_allocate_rev_list(
+                                               4,
+                                               allocator,
+                                               allocator_env,
+                                               lexical_information,
+                                               EBM_NULL,
+                                               EBM_CDDR(code),
+                                               code
+                                               ),
+                                           stack,
+                                           allocator,
+                                           allocator_env);
+
+                               code = EBM_CADDR(code);
+                               eval_info = EBM_NULL;
+                               continue;
+                           }else{
+                               uintptr_t cell = lexical_information;
+                               while (cell != EBM_NULL){
+                                    if (EBM_CAAR(cell) == EBM_CADR(code)){
+                                        EBM_set_cdr(
+                                                EBM_CAR(cell),
+                                                EBM_CADR(eval_info),
+                                                gc_interface);
+                                        break;
+                                    }
+                                    cell = EBM_CDR(cell);
+                               }
+                               res = EBM_UNDEF;
+                           }
+                        }else{
+                           uintptr_t cell = lexical_information;
+                           while (cell != EBM_NULL){
+                                if (EBM_CAAR(cell) == EBM_CADR(code)){
+                                    EBM_set_cdr(
+                                            EBM_CAR(cell),
+                                            EBM_CADR(EBM_CDR(code)),
+                                            gc_interface);
+                                    break;
+                                }
+                                cell = EBM_CDR(cell);
+                           }
+                           res = EBM_UNDEF;
+
+                        }
+                    }
+                    break;
                 case SYNTAX_FX_NUMBER_QUOTE:
                     {
                         res = EBM_CADR(code);
@@ -268,7 +323,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                         break;
                     }
                 case SYNTAX_FX_NUMBER_COMPARE_SYMBOL:
-                    {
+                    {//TODO:eval_info baseに書き換える
                         uintptr_t symb = EBM_CDR(EBM_CAR(lexical_information));
                         uintptr_t syma = EBM_CDR(EBM_CADR(lexical_information));
                         if (syma == symb){
@@ -945,6 +1000,36 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                             exp,
                             sym_object,
                             SYNTAX_FX_NUMBER_DEFINE);
+                }
+                break;
+            case SYNTAX_FX_NUMBER_SET:
+                {
+
+                    uintptr_t exp = _EBM_olisp_tiny_expand_simple_internal(EBM_CADDR(expression),environment,local_cell, gc_interface,state);
+
+                    uintptr_t sym_object = 
+                        _EBM_olisp_tiny_expand_simple_internal(
+                            EBM_CADR(expression),
+                            environment,
+                            local_cell,
+                            gc_interface,
+                            state);
+
+                    if (EBM_IS_SYMBOL_CR(sym_object)){
+                        //local set!
+
+                        return EBM_allocate_rev_list(3,
+                                gc_interface->allocator,
+                                gc_interface->env,
+                                exp,
+                                sym_object,
+                                SYNTAX_FX_NUMBER_SYNTACTIC_LSET);
+
+                    }else{
+                        //global set!
+                        printf("TBA GLOBAL SET %s %d\n",__FILE__,__LINE__);
+                        exit(1);
+                    }
                 }
                 break;
             case SYNTAX_FX_NUMBER_LAMBDA:
