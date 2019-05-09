@@ -1,10 +1,17 @@
-(import (olisp-tiny base-library0))
+;(import (olisp-tiny base-library0))
 
 (define-library (olisp-tiny base-library2)
    (import 
      (olisp-tiny base-library0)
      (olisp-tiny base-library1))
-   (export cond else => and when (rename define2 define))
+   (export 
+     cond 
+     else 
+     => 
+     and 
+     when 
+     (rename define2 define)
+     (rename lambda2 lambda))
    (begin
       (define-syntax let1 ;(let1 (bind object) body)
         (ir-macro-transformer
@@ -91,4 +98,14 @@
               (cons
                 'define
                 (cdr expression))))))
+
+      (define-syntax lambda2;Add support multi expression in body.
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (list 
+              'lambda
+              (cadr expression)
+              (cons 
+                'begin
+                (cddr expression))))))
       ))
