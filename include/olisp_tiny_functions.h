@@ -9,6 +9,7 @@ uintptr_t OLISP_eq(OLISP_state *state);
 uintptr_t OLISP_write_simple(OLISP_state *state);
 uintptr_t OLISP_vector(OLISP_state *state);
 uintptr_t OLISP_pair_p(OLISP_state *state);
+uintptr_t OLISP_symbol_p(OLISP_state *state);
 
 //
 uintptr_t OLISP_fx_add(OLISP_state *state);

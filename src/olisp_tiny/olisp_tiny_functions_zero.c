@@ -71,6 +71,15 @@ uintptr_t OLISP_pair_p(OLISP_state *state){
     return EBM_IS_PAIR_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
 }
 
+uintptr_t OLISP_symbol_p(OLISP_state *state){
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 1){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 symbol?)\n");
+        }
+    }
+    return EBM_IS_SYMBOL_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
+}
+
 uintptr_t OLISP_write_simple(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size == 0||state->arg_size > 2){
