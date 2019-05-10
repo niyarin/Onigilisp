@@ -11,7 +11,9 @@
      and 
      when 
      (rename define2 define)
-     (rename lambda2 lambda))
+     (rename lambda2 lambda)
+     let)
+
    (begin
       (define-syntax let1 ;(let1 (bind object) body)
         (ir-macro-transformer
@@ -108,4 +110,24 @@
               (cons 
                 'begin
                 (cddr expression))))))
+
+      (define2 (map1 proc args)
+         (if (null? args)
+           '()
+           (cons
+             (proc (car args))
+             (map1 proc (cdr args)))))
+
+      (define-syntax let
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (if (symbol? expression)
+              'named-let
+              (cons
+                (cons
+                  'lambda2
+                  (cons
+                     (map1 car (cadr expression))
+                     (cddr expression)))
+                (map1 cadr (cadr expression)))))))
       ))
