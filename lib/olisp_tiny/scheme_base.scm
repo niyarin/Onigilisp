@@ -14,6 +14,7 @@
      else 
      => 
      and 
+     or
      when 
      define
      lambda

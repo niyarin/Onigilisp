@@ -9,6 +9,7 @@
      else 
      => 
      and 
+     or
      when 
      (rename define2 define)
      (rename lambda2 lambda)
@@ -37,6 +38,17 @@
                   (list 'not (cadr expression))
                   #f
                   (cons 'and (cddr expression))))))))
+
+      (define-syntax or
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (if (null? (cdr expression))
+              #f
+              (list
+                'if
+                (cadr expression)
+                #t
+                (cons 'or (cddr expression)))))))
       
    
       (define-syntax 
