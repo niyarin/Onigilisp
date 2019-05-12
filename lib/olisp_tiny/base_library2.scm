@@ -121,9 +121,23 @@
       (define-syntax let
         (ir-macro-transformer
           (lambda (expression inject compare?)
-            (if (symbol? expression)
-              'named-let
-              (cons
+            (if (symbol? (cadr expression))
+              (list ;named let
+                'let
+                (list (list (cadr expression) #f))
+                (list 
+                  'begin
+                   (list 
+                     'set! 
+                     (cadr expression)
+                     (cons 
+                       'lambda2
+                       (cons 
+                          (map1 car (car (cddr expression)))
+                          (cddr (cdr expression)))))
+                   (cons (cadr expression)
+                         (map1 cadr (car (cddr expression))))))
+              (cons;normal let
                 (cons
                   'lambda2
                   (cons
