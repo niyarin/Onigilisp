@@ -11,9 +11,12 @@
      and 
      or
      when 
+     unless
      (rename define2 define)
      (rename lambda2 lambda)
-     let)
+     let
+     let*
+     )
 
    (begin
       (define-syntax let1 ;(let1 (bind object) body)
@@ -96,6 +99,15 @@
                 'begin
                 (cddr expression))))))
 
+      (define-syntax unless
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (list 
+              'if
+              (list 'not (cadr expression))
+              (cons
+                'begin
+                (cddr expression))))))
 
       (define-syntax define2;Add support define syntax sugar.
         (ir-macro-transformer
@@ -156,4 +168,17 @@
                      (map1 car (cadr expression))
                      (cddr expression)))
                 (map1 cadr (cadr expression)))))))
+
+      (define-syntax let*
+        (ir-macro-transformer
+          (lambda (expression inject compare?)
+            (if (null? (cadr expression))
+              (cons 'begin (cddr expression))
+              (list
+                'let 
+                (list (car (cadr expression)))
+                (cons 'let* 
+                  (cons (cdr (cadr expression))
+                        (cddr expression))))))))
+
       ))

@@ -9,6 +9,7 @@
    (export
      import
      define-library
+     export
      define-record-type
      cond 
      else 
@@ -16,9 +17,11 @@
      and 
      or
      when 
+     unless
      define
      lambda
      let
+     let*
      list?
      if set! quote begin define-library define-syntax
      cons car cdr eq? write-simple vector pair? symbol?
