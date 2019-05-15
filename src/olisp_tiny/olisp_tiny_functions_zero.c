@@ -6,10 +6,10 @@ uintptr_t OLISP_car(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 car)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 car)\n",state);
         }
         if (!EBM_IS_PAIR_CR(state->args1[0])){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required car)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required car)",state);
         }
     }
     uintptr_t pair = state->args1[0];
@@ -20,10 +20,10 @@ uintptr_t OLISP_cdr(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 cdr)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 cdr)\n",state);
         }
         if (!EBM_IS_PAIR_CR(state->args1[0])){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required cdr)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required cdr)\n",state);
         }
     }
     uintptr_t pair = state->args1[0];
@@ -34,7 +34,7 @@ uintptr_t OLISP_cons(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 2){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 cons)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 cons)\n",state);
         }
     }
 
@@ -65,7 +65,7 @@ uintptr_t OLISP_vector(OLISP_state *state){
 uintptr_t OLISP_pair_p(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 pair?)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 pair?)\n",state);
         }
     }
     return EBM_IS_PAIR_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
@@ -74,7 +74,7 @@ uintptr_t OLISP_pair_p(OLISP_state *state){
 uintptr_t OLISP_symbol_p(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 symbol?)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 symbol?)\n",state);
         }
     }
     return EBM_IS_SYMBOL_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
@@ -83,7 +83,7 @@ uintptr_t OLISP_symbol_p(OLISP_state *state){
 uintptr_t OLISP_write_simple(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size == 0||state->arg_size > 2){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 write-simple)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 write-simple)\n",state);
         }
     }
 
@@ -98,7 +98,7 @@ uintptr_t OLISP_write_simple(OLISP_state *state){
 uintptr_t OLISP_record_p(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 1){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 record?)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 1 record?)\n",state);
         }
     }
     return EBM_IS_RECORD_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
@@ -107,15 +107,15 @@ uintptr_t OLISP_record_p(OLISP_state *state){
 uintptr_t OLISP_record_ref(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 2){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 record-ref)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 record-ref)\n",state);
         }
         //TODO:add support big number
         if (!EBM_IS_FX_NUMBER_CR(state->args1[1])){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR integer required record-ref)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR integer required record-ref)\n",state);
         }
 
         if (!EBM_IS_RECORD_CR(state->args1[0])){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR record required record-ref)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR record required record-ref)\n",state);
         }
     }
 
@@ -137,13 +137,13 @@ uintptr_t OLISP_make_record(OLISP_state *state){
 uintptr_t OLISP_fx_add(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size != 2){
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 fx+)\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 fx+)\n",state);
         }
 
         if (!EBM_IS_FX_NUMBER_CR(state->args1[0]) ||
             !EBM_IS_FX_NUMBER_CR(state->args1[1])){
         
-            OLISP_CINTERFACE_TYPE_ERROR("(ERROR fx-number required fx+ )\n");
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR fx-number required fx+ )\n",state);
         }
     }
 

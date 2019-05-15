@@ -141,7 +141,9 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
     uintptr_t eval_info = EBM_NULL;// (次の評価 . 評価済み)
     uintptr_t lexical_information = EBM_vector_ref_CA(environment,3);
     uintptr_t global = EBM_CAR(EBM_vector_ref_CA(environment,8));
-    
+    olisp_state->runtime_var1 = 
+        EBM_allocate_vector_CA(3,allocator,allocator_env);
+
     while (stack != EBM_NULL ||  code != EBM_NULL){
         if (EBM_IS_PAIR_CR(code)){
             uintptr_t operator = EBM_CAR(code);
@@ -368,15 +370,30 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                         EBM_CAR(cell));
                                 cell = EBM_CDR(cell);
                             }
+
                             uintptr_t fun =  OLISP_get_arg(olisp_state,0);
                             if (!EBM_IS_RECORD_CR(fun)){
-                                //TODO;
                                 write(fun,allocator,allocator_env);
                                 write(code,allocator,allocator_env);
                                 printf("ERROR::%s %d\n",__FILE__,__LINE__);
                                 exit(1);
                             }
 
+
+                            EBM_vector_primitive_set_CA(
+                                    olisp_state->runtime_var1,
+                                    0,
+                                    code);
+
+                            EBM_vector_primitive_set_CA(
+                                    olisp_state->runtime_var1,
+                                    1,
+                                    EBM_CDR(eval_info));
+
+                            EBM_vector_primitive_set_CA(
+                                    olisp_state->runtime_var1,
+                                    2,
+                                    stack);
 
                             if (EBM_record_ref_CA(fun,1) == 0){
                                 uintptr_t _res = OLISP_fun_call(olisp_state);
@@ -528,7 +545,6 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                 if (EBM_CAAR(cell) == code){
                     _res = EBM_CDAR(cell);
                 }
-
                 cell = EBM_CDR(cell);
             }
             if (_res == EBM_UNDEF){
@@ -548,6 +564,22 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                 && EBM_record_first(res) == global_ref_symbol){
                 res = EBM_vector_ref_CA(global,EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(res)));
             }
+
+OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+            if (res == EBM_UNDEF){
+                EBM_vector_primitive_set_CA(
+                        olisp_state->runtime_var1,
+                        0,
+                        EBM_record_second(code));
+
+                EBM_vector_primitive_set_CA(
+                        olisp_state->runtime_var1,
+                        2,
+                        stack);
+
+                OLISP_simple_error("(error variable not found.)", olisp_state);
+            }
+}
         }else{
             res = code;
         }
@@ -894,7 +926,6 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
 
                     {//TODO:あとでリファクタリング
                         //TODO:セットしたrenamed_symbolの削除
-                        //TODO:renameを戻す
                         
                         uintptr_t namespace_reference_object =  
                             _OLISP_allocate_namespace_ref(
@@ -952,10 +983,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                             gc_interface->env),
                         gc_interface->allocator,
                         gc_interface->env);
-
             uintptr_t ecode = EBM_olisp_eval_simple(to_expand_code, environment,gc_interface,state);
-
-
             uintptr_t expanded_code = 
                 _EBM_olisp_tiny_expand_simple_internal(
                     ecode,
@@ -963,6 +991,7 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                     local_cell,
                     gc_interface,
                     state);
+
             expanded_code = 
                 _EBM_olisp_tiny_renaming(
                         expanded_code,
@@ -1333,8 +1362,18 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                                     gc_interface->allocator,
                                     gc_interface->env,
                                     EBM_UNDEF,
-                                    EBM_CADDR(expression),
-                                    EBM_CADR(expression),
+                                    _EBM_olisp_tiny_expand_simple_internal(
+                                             EBM_CADDR(expression),
+                                             environment,
+                                             local_cell,
+                                             gc_interface,
+                                             state),
+                                    _EBM_olisp_tiny_expand_simple_internal(
+                                             EBM_CADR(expression),
+                                             environment,
+                                             local_cell,
+                                             gc_interface,
+                                             state),
                                     SYNTAX_FX_NUMBER_IF);
                     }
 
@@ -1624,11 +1663,11 @@ static uintptr_t _EBM_olisp_tiny_set_fun_to_environment(uintptr_t environment,EB
 
 static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"cons","car","cdr","eq?","write-simple","vector","pair?"};
+            = {"cons","car","cdr","eq?","write-simple","vector","pair?","symbol?"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p};
+    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p,OLISP_symbol_p};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],7);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],8);
     return EBM_UNDEF;
 }
 
