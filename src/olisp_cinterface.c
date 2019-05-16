@@ -73,7 +73,60 @@ uintptr_t OLISP_fun_call(OLISP_state *state){
     //TODO:未実装
 }
 
-void OLISP_simple_error(char *message){
-    fputs(message,stderr);
-    exit(1);
+uintptr_t OLISP_error(OLISP_state *state){
+    if (state->error_stack == EBM_NULL){
+        exit(1);
+    }
+    uintptr_t jbuf_ptr_box = EBM_CAR(state->error_stack);
+    jmp_buf *jbuf = (jmp_buf*)EBM_pointer_box_ref_CR(jbuf_ptr_box);
+    longjmp(*jbuf,1);   
+    state->error_stack = EBM_CDR(state->error_stack);
+    return EBM_UNDEF;
+}
+
+uintptr_t OLISP_simple_error(char *message,OLISP_state *state){
+    uint32_t *u32_string = state->allocator((strlen(message)+1) * sizeof(uint32_t),state->allocator_env);
+    int i=0;
+    while (message[i]){
+        u32_string[i] = (uint32_t)message[i];
+        i++;
+    }
+
+    uintptr_t error_message_object = EBM_allocate_string_CA(u32_string, state->gc_interface);
+    
+    //TODO:free u32_string
+
+    OLISP_cfun_call(state, OLISP_error,1,error_message_object);
+}
+
+uintptr_t OLISP_symbol_intern(uintptr_t symbol,OLISP_state *state){
+    uintptr_t trie = state->symbol_intern;
+    uintptr_t res = EBM_symbol_trie_ref(trie,symbol);
+    if (res == EBM_UNDEF){
+        EBM_symbol_trie_set(trie,symbol,symbol,state->gc_interface);   
+        return symbol;
+    }
+    return res;
+}
+
+uintptr_t OLISP_AUX_set_exception_handler_CA(jmp_buf *jbuf,OLISP_state *state){
+    uintptr_t jbuf_ptr_box = 
+        EBM_allocate_pointer_box_CA(
+                jbuf,
+                state->allocator,
+                state->allocator_env);
+
+    state->error_stack = 
+        EBM_allocate_pair(
+                jbuf_ptr_box,
+                state->error_stack,
+                state->allocator,
+                state->allocator_env);
+
+    return EBM_UNDEF;
+}
+
+uintptr_t OLISP_AUX_pop_exception_handler(OLISP_state *state){
+    state->error_stack= EBM_CDR(state->error_stack);
+    return EBM_UNDEF;
 }

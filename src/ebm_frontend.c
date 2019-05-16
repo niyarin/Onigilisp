@@ -638,12 +638,26 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
             }
             EBM_write_cstring_CA(")",port);
             return EBM_UNDEF;
+        }else if (EBM_is_string_CR(object)){
+            EBM_write_char_CA('"',port);
+            int i;
+            for (i=0;i<EBM_string_length_CR(object);i++){
+                EBM_write_char_CA(EBM_string_ref_CACR(object,i),port);
+            }
+            EBM_write_char_CA('"',port);
+            return EBM_UNDEF;
         }
 
         if (EBM_record_first(object) == EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE){
-            printf("#<symbol-trie>");//TODO:USE PORT
+            EBM_write_cstring_CA("#<symbol-trie>",port);
             return EBM_UNDEF;
         }
+
+        if (EBM_record_first(object) == EBM_BUILT_IN_RECORD_TYPE_HASH_TABLE){
+            EBM_write_cstring_CA("#<simple-hash>",port);
+            return EBM_UNDEF;
+        }
+
 
         //FOR DEBUG 
         //USER RECORD
@@ -658,6 +672,8 @@ uintptr_t EBM_write_simple(uintptr_t object,uintptr_t port){
                 EBM_write_char_CA(' ',port);
             }
             */
+
+                //EBM_write_simple(EBM_record_ref_CA(object,2),port);
             EBM_write_cstring_CA(")",port);
             return EBM_UNDEF;
         }

@@ -100,6 +100,16 @@ uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t alloc
 #define EBM_CDDDR(p) EBM_CDR(EBM_CDDR(p))
 #define EBM_CADDR(p) EBM_CAR(EBM_CDDR(p))
 
+//
+// STRING OPERATORS
+//
+uintptr_t EBM_allocate_string_CA(uint32_t *utf32_string,EBM_GC_INTERFACE *gc_interface);
+
+#define EBM_is_string_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_STRING))
+#define EBM_string_length_CR(object) (EBM_record_second(object))
+#define EBM_triple_tuple_ref_CA(tuple,index) EBM_record_ref_CA(tuple,index + 1)
+uintptr_t EBM_string_ref_CACR(uintptr_t ebm_string,uintptr_t index);
+
 
 //
 //CHARACTER TABLE OPERATIONS
