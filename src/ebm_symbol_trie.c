@@ -6,6 +6,7 @@
 #define EBM_SYMBOL_TRIE_INDEX_POSITION_TABLE 3
 #define EBM_SYMBOL_TRIE_INDEX_CHECK_TABLE 4
 #define EBM_SYMBOL_TRIE_INDEX_ITEMS 5
+#define EBM_SYMBOL_TRIE_INDEX_SYMBOL_LIST 6
 #define EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE 7
 #define EBM_SYMBOL_TRIE_INDEX_LARGE_INDEX_TABLE_SIZE 8
 
@@ -128,6 +129,7 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
 
         if (new_pos >= mem_size){
             //OVER FLOW
+            printf("OVER FLOW!\n");
             exit(1);
         }
 
@@ -148,6 +150,7 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                     base_number++;
                     if (base_number ==  mem_size){
                         //TODO:
+                        printf("ERR\n");
                         exit(1);
                     }
                 }
@@ -198,8 +201,8 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                             uintptr_t new_index = org_index - original_base_pos + new_base; 
                             check[new_index] = pos;
                             base[new_index] = base[org_index];
-                            items[new_index] = items[org_index];
-                            items[org_index] = EBM_NULL;//?
+                            items[new_index] = items[org_index];//TODO:中の座標をかえる
+                            items[org_index] = EBM_UNDEF;//?
                             //整合性
                             int j;
                             for (j=0;j<mem_size;j++){
@@ -228,6 +231,7 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                                 base_number++;
                                 if (base_number ==  mem_size){
                                     //TODO:
+                                    printf("ERR\n");
                                     exit(1);
                                 }
                             }
@@ -239,6 +243,7 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
                     }
                 }
                 if (!flag1){//入れられる場所がなかった
+                    printf("ERR\n");
                     exit(1);
                     //TODO:実装しよう
                 }
@@ -251,12 +256,12 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
 
     if (!already_inserted || items[pos] == EBM_UNDEF){
         uintptr_t item_pair = EBM_allocate_pair(symbol,EBM_record_ref_CA(trie,6),gc_interface->allocator,gc_interface->env);
-        EBM_record_set_CA(trie,6,item_pair,gc_interface->write_barrier,gc_interface->env);
+        EBM_record_set_CA(trie,EBM_SYMBOL_TRIE_INDEX_SYMBOL_LIST,item_pair,gc_interface->write_barrier,gc_interface->env);
         //TODO:item[pos]にひとつしかいれられないのはおかしいので直す?
         items[pos] = EBM_allocate_pair(object,
                                        EBM_allocate_pair(
                                            item_pair,
-                                           pos<<3,
+                                           EBM_NULL,
                                            gc_interface->allocator,
                                            gc_interface->env),
                                        gc_interface->allocator,
@@ -270,18 +275,23 @@ uintptr_t EBM_symbol_trie_set(uintptr_t trie,uintptr_t symbol,uintptr_t object,E
 
 uintptr_t EBM_symbol_trie_to_alist(uintptr_t symbol_trie,EBM_ALLOCATOR allocator,uintptr_t allocator_env){
     uintptr_t res = EBM_NULL;
-    uintptr_t cell = EBM_record_ref_CA(symbol_trie,6);
-    while (cell != EBM_NULL){
-        res = EBM_allocate_pair(
-                EBM_allocate_pair(
-                    EBM_CAAR(cell),
-                    EBM_CDAR(cell),
+    uintptr_t size = 
+            EBM_record_ref_CA(symbol_trie,1);
+
+    uintptr_t *items = (uintptr_t*)EBM_record_ref_CA(symbol_trie,5);
+    int i;
+    for (i=0;i<size;i++){
+        if (items[i] != EBM_UNDEF){
+            res = EBM_allocate_pair(
+                    EBM_allocate_pair(
+                        EBM_CAAR(EBM_CDR(items[i])),
+                        EBM_CAR(items[i]),
+                        allocator,
+                        allocator_env),
+                    res,
                     allocator,
-                    allocator_env),
-                res,
-                allocator,
-                allocator_env);
-        cell = EBM_CDR(cell);
+                    allocator_env);
+        }
     }
     return res;
 }

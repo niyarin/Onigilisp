@@ -16,17 +16,58 @@ static void repl(EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state,uintptr
     uintptr_t input_port = EBM_frontend_allocate_input_file_port(stdin,gc_interface->allocator,gc_interface->env);
     uintptr_t output_port = EBM_frontend_allocate_output_file_port_CA(stdout,gc_interface->allocator,gc_interface->env);
 
+    uintptr_t error_object;
     while (1){
        printf("\nOLISP>");
        uintptr_t read_obj = OLISP_cfun_call(olisp_state,OLISP_read,1,input_port);
        if (read_obj == EBM_EOF){
             break;
        }
+    
+       OLISP_TRY(olisp_state){
+           uintptr_t expanded_expression = EBM_olisp_tiny_expand_simple(read_obj, eval_env,gc_interface,olisp_state);
+           uintptr_t res = EBM_olisp_eval_simple(expanded_expression, eval_env,gc_interface,olisp_state);
 
-       uintptr_t expanded_expression = EBM_olisp_tiny_expand_simple(read_obj, eval_env,gc_interface,olisp_state);
-       uintptr_t res = EBM_olisp_eval_simple(expanded_expression, eval_env,gc_interface,olisp_state);
+           EBM_write_simple(res,output_port);
+       }OLISP_CATCH(error_object,olisp_state){
+           if (olisp_state->arg_size>= 1){//TODO:std-out => std-err
+               printf("ERROR::");
 
-       EBM_write_simple(res,output_port);
+               EBM_write_simple(
+                        OLISP_get_arg(olisp_state,0),
+                        output_port);
+               printf("\n\n");
+               
+               printf("CODE:");
+
+               EBM_write_simple(
+                        EBM_vector_ref_CA(olisp_state->runtime_var1,0),
+                        output_port);
+
+
+               printf("STACK:");
+
+               int i;
+               uintptr_t stack_cell = 
+                   EBM_vector_ref_CA(
+                           olisp_state->runtime_var1,
+                           2);
+
+               while (stack_cell != EBM_NULL){
+                   
+                   printf("[1]\n");
+                   EBM_write_simple(
+                            EBM_CAR(stack_cell),
+                            output_port);
+                   stack_cell = EBM_CDR(stack_cell);
+               }
+
+
+               printf("\n\n");
+               printf("\n");
+
+           }
+       }
     }
 }
 
@@ -34,6 +75,7 @@ static void load_script(char* filename,EBM_GC_INTERFACE *gc_interface,OLISP_stat
     FILE *fp;
     if  ((fp = fopen(filename,"r")) == NULL){
         //TODO:SUPPORT ERROR
+        printf("ERR%d\n",__LINE__);
         exit(1);
     }
 
@@ -51,9 +93,9 @@ static void load_script(char* filename,EBM_GC_INTERFACE *gc_interface,OLISP_stat
 
 static void bootstrap(char* libdir,EBM_GC_INTERFACE *gc_interface,OLISP_state *olisp_state,uintptr_t eval_env){
     char* lib_filename = (char*)malloc(strlen(libdir) + 512);
-    char libs[][512] = {"base_library1.scm","base_library2.scm"};
+    char libs[][512] = {"base_library1.scm","base_library2.scm","base_library3.scm","base_library4.scm","scheme_base.scm"};
     int i;
-    for (i=0;i<2;i++){
+    for (i=0;i<5;i++){
         sprintf(lib_filename,"%s/%s",libdir,libs[i]);
         load_script(lib_filename,gc_interface,olisp_state,eval_env);
     }
