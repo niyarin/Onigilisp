@@ -80,6 +80,22 @@ uintptr_t OLISP_symbol_p(OLISP_state *state){
     return EBM_IS_SYMBOL_CR(state->args1[0])?EBM_TRUE:EBM_FALSE;
 }
 
+uintptr_t OLISP_make_byte_vector(OLISP_state *state){
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size > 2){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 or 3 make-vector)\n",state);
+        }
+    }
+
+    uintptr_t res = 
+        EBM_allocate_byte_vector_CA(
+                EBM_FX_NUMBER_TO_C_INTEGER_CR(state->args1[0]),
+                state->allocator,
+                state->allocator_env);
+
+    return res;
+}
+
 uintptr_t OLISP_write_simple(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size == 0||state->arg_size > 2){

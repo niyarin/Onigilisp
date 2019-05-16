@@ -127,6 +127,7 @@ uintptr_t EBM_char_table_set_CA(uintptr_t table,uint32_t cc,uintptr_t object,EBM
 #define EBM_BUILT_IN_RECORD_TYPE_VECTOR EBM_allocate_FX_NUMBER_CA(2)
 #define EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE EBM_allocate_FX_NUMBER_CA(3)
 #define EBM_BUILT_IN_RECORD_TYPE_STRING EBM_allocate_FX_NUMBER_CA(4)
+#define EBM_BUILT_IN_RECORD_TYPE_BYTE_VECTOR EBM_allocate_FX_NUMBER_CA(5)
 
 #define EBM_BUILT_IN_RECORD_TYPE_RECORD_POINTER EBM_allocate_FX_NUMBER_CA(29)
 #define EBM_BUILT_IN_RECORD_TYPE_POINTER_BOX EBM_allocate_FX_NUMBER_CA(30)
@@ -167,7 +168,14 @@ uintptr_t EBM_allocate_symbol_from_cstring_CA(char *symbol,EBM_ALLOCATOR allocat
 uintptr_t EBM_allocate_symbol_no_copy(uint32_t *symbol_data,EBM_GC_INTERFACE *gc_interface);
 uintptr_t EBM_symbol_compare_cstring_CACR(uintptr_t symbol,char* cascii_string);
 #define EBM_IS_SYMBOL_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_SYMBOL))
+#define EBM_byte_vector_length_CR(object) (EBM_record_third(object))
 
+//
+//BYTE VECTOR OPERATIONS
+//
+uintptr_t EBM_allocate_byte_vector_CA(uintptr_t size,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
+uintptr_t EBM_byte_vector_ref_CACR(uintptr_t byte_vector,uintptr_t index);
+#define EBM_is_byte_vector_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_BYTE_VECTOR))
 
 //
 //POINTER BOX OPERATIONS
