@@ -544,6 +544,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
             while (cell != EBM_NULL){
                 if (EBM_CAAR(cell) == code){
                     _res = EBM_CDAR(cell);
+                    break;
                 }
                 cell = EBM_CDR(cell);
             }
