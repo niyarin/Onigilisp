@@ -176,6 +176,7 @@ uintptr_t EBM_symbol_compare_cstring_CACR(uintptr_t symbol,char* cascii_string);
 uintptr_t EBM_allocate_byte_vector_CA(uintptr_t size,EBM_ALLOCATOR allocator,uintptr_t allocator_env);
 uintptr_t EBM_byte_vector_ref_CACR(uintptr_t byte_vector,uintptr_t index);
 #define EBM_is_byte_vector_CR(object) (EBM_IS_RECORD_CR(object)&&(EBM_record_first(object)==EBM_BUILT_IN_RECORD_TYPE_BYTE_VECTOR))
+uintptr_t EBM_byte_vector_set_CA(uintptr_t bytevector,uintptr_t index,unsigned char num);
 
 //
 //POINTER BOX OPERATIONS

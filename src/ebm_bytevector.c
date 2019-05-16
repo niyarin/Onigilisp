@@ -16,3 +16,9 @@ uintptr_t EBM_byte_vector_ref_CACR(uintptr_t byte_vector,uintptr_t index){
     unsigned char* bytes = EBM_record_ref_CA(byte_vector,1);
     return bytes[index];
 }
+
+uintptr_t EBM_byte_vector_set_CA(uintptr_t byte_vector,uintptr_t index,unsigned char num){
+    unsigned char* bytes = EBM_record_ref_CA(byte_vector,1);
+    bytes[index] = num;
+    return EBM_UNDEF;
+}

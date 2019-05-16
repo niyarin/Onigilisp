@@ -1664,11 +1664,11 @@ static uintptr_t _EBM_olisp_tiny_set_fun_to_environment(uintptr_t environment,EB
 
 static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"cons","car","cdr","eq?","write-simple","vector","pair?","symbol?","make-byte-vector"};
+            = {"cons","car","cdr","eq?","write-simple","vector","pair?","symbol?","make-byte-vector","byte-vector-set!"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p,OLISP_symbol_p, OLISP_make_byte_vector};
+    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p,OLISP_symbol_p, OLISP_make_byte_vector,OLISP_byte_vector_set};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],9);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],10);
     return EBM_UNDEF;
 }
 

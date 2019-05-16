@@ -96,6 +96,16 @@ uintptr_t OLISP_make_byte_vector(OLISP_state *state){
     return res;
 }
 
+uintptr_t OLISP_byte_vector_set(OLISP_state *state){
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 3){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 3 byte-vector-set!)\n",state);
+        }
+    }
+    EBM_byte_vector_set_CA(state->args1[0],EBM_FX_NUMBER_TO_C_INTEGER_CR(state->args1[1]),EBM_FX_NUMBER_TO_C_INTEGER_CR(state->args1[2]));
+    return EBM_UNDEF;
+}
+
 uintptr_t OLISP_write_simple(OLISP_state *state){
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
         if (state->arg_size == 0||state->arg_size > 2){
