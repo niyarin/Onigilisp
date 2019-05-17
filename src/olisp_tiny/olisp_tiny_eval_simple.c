@@ -5,9 +5,13 @@
 #include "olisp_tiny_functions.h"
 #include "olisp_cinterface.h"
 
+#ifdef OLISP_JIT
+#include "olisp_jit.h"
+#endif 
+
 #include<stdio.h>
 
-#define OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME 18
+#define OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME 24
 
 #define SYNTAX_FX_NUMBER_DEFINE EBM_allocate_FX_NUMBER_CA(0)
 #define SYNTAX_FX_NUMBER_LAMBDA EBM_allocate_FX_NUMBER_CA(1)
@@ -1692,6 +1696,17 @@ static uintptr_t _EBM_olisp_tiny_set_base_aux_fun(uintptr_t environment,EBM_GC_I
     return EBM_UNDEF;
 }
 
+static uintptr_t _EBM_olisp_tiny_set_jit_funs(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
+    char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
+            = {"jit-as-code","jit-run"};
+
+    OLISP_cfun olisp_cfuns[] = { OLISP_jit_from_byte_vector, OLISP_jit_run};
+
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],2);
+    return EBM_UNDEF;
+}
+
+
 static uintptr_t  _EBM_olisp_tiny_set_library0_syntax(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     uintptr_t expand_env = 
         EBM_vector_ref_CA(
@@ -1750,5 +1765,9 @@ uintptr_t EBM_olisp_tiny_set_library0(uintptr_t environment,EBM_GC_INTERFACE *gc
             gc_interface,
             state);
 
+     _EBM_olisp_tiny_set_jit_funs(//あとで移動
+             environment,
+             gc_interface,
+             state);
     return EBM_UNDEF;
 }
