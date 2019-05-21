@@ -16,6 +16,20 @@ uintptr_t OLISP_car(OLISP_state *state){
     return EBM_CAR(pair);
 }
 
+uintptr_t OLISP_set_car(OLISP_state *state){
+
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 2){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 set-car)\n",state);
+        }
+        if (!EBM_IS_PAIR_CR(state->args1[0])){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required set-car)",state);
+        }
+    }
+
+    return EBM_set_car( state->args1[0], state->args1[1], state->gc_interface);
+}
+
 uintptr_t OLISP_cdr(OLISP_state *state){
 
     OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
@@ -28,6 +42,20 @@ uintptr_t OLISP_cdr(OLISP_state *state){
     }
     uintptr_t pair = state->args1[0];
     return EBM_CDR(pair);
+}
+
+uintptr_t OLISP_set_cdr(OLISP_state *state){
+
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 2){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 set-cdr)\n",state);
+        }
+        if (!EBM_IS_PAIR_CR(state->args1[0])){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR pair-required set-cdr)",state);
+        }
+    }
+
+    return EBM_set_cdr( state->args1[0], state->args1[1], state->gc_interface);
 }
 
 uintptr_t OLISP_cons(OLISP_state *state){
@@ -174,4 +202,33 @@ uintptr_t OLISP_fx_add(OLISP_state *state){
     }
 
     return EBM_FX_ADD(state->args1[0],state->args1[1]);
+}
+
+uintptr_t OLISP_fx_shift_right(OLISP_state *state){
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 2){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 fxarithmetic-shift-right )\n",state);
+        }
+
+        if (!EBM_IS_FX_NUMBER_CR(state->args1[0]) ||
+            !EBM_IS_FX_NUMBER_CR(state->args1[1])){
+        
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR fx-number required fxarithmetic-shift-right)\n",state);
+        }
+    }
+    return EBM_FX_SHIFT_RIGHT(state->args1[0],state->args1[1]);
+}
+uintptr_t OLISP_fx_shift_left(OLISP_state *state){
+    OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
+        if (state->arg_size != 2){
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR wrong-number-of-arguments 2 fxarithmetic-shift-right )\n",state);
+        }
+
+        if (!EBM_IS_FX_NUMBER_CR(state->args1[0]) ||
+            !EBM_IS_FX_NUMBER_CR(state->args1[1])){
+        
+            OLISP_CINTERFACE_TYPE_ERROR("(ERROR fx-number required fxarithmetic-shift-right)\n",state);
+        }
+    }
+    return EBM_FX_SHIFT_LEFT(state->args1[0],state->args1[1]);
 }

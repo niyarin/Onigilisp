@@ -3,6 +3,8 @@
 #include "olisp_cinterface.h"
 
 uintptr_t OLISP_car(OLISP_state *state);
+uintptr_t OLISP_set_car(OLISP_state *state);
+uintptr_t OLISP_set_cdr(OLISP_state *state);
 uintptr_t OLISP_cdr(OLISP_state *state);
 uintptr_t OLISP_cons(OLISP_state *state);
 uintptr_t OLISP_eq(OLISP_state *state);
@@ -15,6 +17,8 @@ uintptr_t OLISP_byte_vector_set(OLISP_state *state);
 
 //
 uintptr_t OLISP_fx_add(OLISP_state *state);
+uintptr_t OLISP_fx_shift_right(OLISP_state *state);
+uintptr_t OLISP_fx_shift_left(OLISP_state *state);
 
 
 //

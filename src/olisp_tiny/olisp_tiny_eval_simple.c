@@ -11,7 +11,7 @@
 
 #include<stdio.h>
 
-#define OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME 24
+#define OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME 25
 
 #define SYNTAX_FX_NUMBER_DEFINE EBM_allocate_FX_NUMBER_CA(0)
 #define SYNTAX_FX_NUMBER_LAMBDA EBM_allocate_FX_NUMBER_CA(1)
@@ -575,7 +575,7 @@ OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
                 EBM_vector_primitive_set_CA(
                         olisp_state->runtime_var1,
                         0,
-                        EBM_record_second(code));
+                        EBM_record_third(code));
 
                 EBM_vector_primitive_set_CA(
                         olisp_state->runtime_var1,
@@ -1668,21 +1668,21 @@ static uintptr_t _EBM_olisp_tiny_set_fun_to_environment(uintptr_t environment,EB
 
 static uintptr_t _EBM_olisp_tiny_set_library0_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"cons","car","cdr","eq?","write-simple","vector","pair?","symbol?","make-byte-vector","byte-vector-set!"};
+            = {"cons","car","cdr","eq?","write-simple","vector","pair?","symbol?","make-bytevector","bytevector-set!","set-car!","set-cdr!"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p,OLISP_symbol_p, OLISP_make_byte_vector,OLISP_byte_vector_set};
+    OLISP_cfun olisp_cfuns[] = {OLISP_cons,OLISP_car,OLISP_cdr,OLISP_eq,OLISP_write_simple,OLISP_vector,OLISP_pair_p,OLISP_symbol_p, OLISP_make_byte_vector,OLISP_byte_vector_set,OLISP_set_car,OLISP_set_cdr};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],10);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],12);
     return EBM_UNDEF;
 }
 
 static uintptr_t _EBM_olisp_tiny_set_fxnumber_fun(uintptr_t environment,EBM_GC_INTERFACE *gc_interface,OLISP_state *state){
     char fnames[][OLISP_TINY_SIMPLE_LENGTH_OF_FUCTION_NAME ] 
-            = {"fx+"};
+            = {"fx+","fxarithmetic-shift-right","fxarithmetic-shift-left"};
 
-    OLISP_cfun olisp_cfuns[] = {OLISP_fx_add};
+    OLISP_cfun olisp_cfuns[] = {OLISP_fx_add,OLISP_fx_shift_right,OLISP_fx_shift_left};
 
-    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],1);
+    _EBM_olisp_tiny_set_fun_to_environment(environment,gc_interface,state,&(fnames[0]),&olisp_cfuns[0],3);
     return EBM_UNDEF;
 }
 
