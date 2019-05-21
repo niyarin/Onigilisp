@@ -81,13 +81,18 @@
                     'if
                     'tmp
                     (list (cadr (cdr (cadr expression))) 'tmp)
-                    (cons 'cond (cddr expression))))
+                    (if (not (null? (cddr expression)))
+                       (cons 'cond (cddr expression))
+                       '(if #f #f))))
                 (list 
                   'if 
                   (car (cadr expression))
                   (cons 'begin (cdr (cadr expression)))
-                  (cons 'cond (cddr expression))))
-              ))))
+                  (if 
+                    (not (null? (cddr expression)))
+                    (cons 'cond (cddr expression))
+                    '(if #f #f)))
+              )))))
 
       (define-syntax when
         (ir-macro-transformer
