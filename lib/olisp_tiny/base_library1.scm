@@ -2,7 +2,7 @@
 
 (define-library (olisp-tiny base-library1)
    (import (olisp-tiny base-library0))
-   (export caar cadr cdar cddr not null? list)
+   (export caar cadr cdar cddr not null? list apply)
    (begin
       (define caar
         (lambda (x) (car (car x))))
@@ -29,4 +29,15 @@
       (define list
         (lambda x x))
 
+      (define apply-aux ;NOT TAIL CALL
+        (lambda (ls)
+          (if (null? (cdr ls))
+            (car ls)
+            (cons (car ls) (apply-aux (cdr ls))))))
+
+
+      (define apply 
+        (lambda args
+          (apply-syntax-v
+            (apply-aux args))))
       ))

@@ -51,11 +51,13 @@
 #define EBM_allocate_character_CA(cchar) ((0b11<<EBM_CONFIG_POINTER_INFORMATION_SIZE) + (cchar << (EBM_CONFIG_POINTER_INFORMATION_SIZE + 3)))
 #define EBM_char2unicode_CR(echar) (echar>>(EBM_CONFIG_POINTER_INFORMATION_SIZE+3))
 
-//SRFI 143 SUBSET
+//SRFI 143 (scheme fixnum) SUBSET
 #define EBM_allocate_FX_NUMBER_CA(cint) ((((intptr_t)0b01)<<EBM_CONFIG_POINTER_INFORMATION_SIZE) + (((intptr_t)cint) << (EBM_CONFIG_POINTER_INFORMATION_SIZE + 2)))
 #define EBM_IS_FX_NUMBER_CR(object) ((((object)&(1<<(EBM_CONFIG_POINTER_INFORMATION_SIZE)))&((1<<(EBM_CONFIG_POINTER_INFORMATION_SIZE+2))-1)) == (0b01<<EBM_CONFIG_POINTER_INFORMATION_SIZE))
 #define EBM_FX_NUMBER_TO_C_INTEGER_CR(integer) (integer>>(EBM_CONFIG_POINTER_INFORMATION_SIZE + 2))
 #define EBM_FX_ADD(n1,n2) (EBM_allocate_FX_NUMBER_CA((EBM_FX_NUMBER_TO_C_INTEGER_CR(n1)) + EBM_FX_NUMBER_TO_C_INTEGER_CR(n2)))
+#define EBM_FX_SHIFT_RIGHT(n1,fx_count) EBM_allocate_FX_NUMBER_CA(EBM_FX_NUMBER_TO_C_INTEGER_CR(n1)>>EBM_FX_NUMBER_TO_C_INTEGER_CR(fx_count))
+#define EBM_FX_SHIFT_LEFT(n1,fx_count) EBM_allocate_FX_NUMBER_CA(EBM_FX_NUMBER_TO_C_INTEGER_CR(n1)<<EBM_FX_NUMBER_TO_C_INTEGER_CR(fx_count))
 #define EBM_FX_GREATEST_CR (INTPTR_MAX>>(EBM_CONFIG_POINTER_INFORMATION_SIZE+2))
 
 //
@@ -91,7 +93,8 @@ uintptr_t EBM_allocate_pair(uintptr_t car,uintptr_t cdr,EBM_ALLOCATOR allocator,
 #define EBM_PRIMITIVE_SET_CDR(p,o) ((((uintptr_t*)(EBM_REMOVE_TYPE(p)))[1]) = o)
 uintptr_t EBM_set_car(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
 uintptr_t EBM_set_cdr(uintptr_t pair,uintptr_t object,EBM_GC_INTERFACE *gc_interface);
-uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t allocator_env, ...);
+uintptr_t EBM_allocate_rev_list_CR(int size,EBM_ALLOCATOR allocator,uintptr_t allocator_env, ...);
+uintptr_t EBM_simple_list_length(uintptr_t ls);
 
 #define EBM_CAAR(p) EBM_CAR(EBM_CAR(p))
 #define EBM_CADR(p) EBM_CAR(EBM_CDR(p))

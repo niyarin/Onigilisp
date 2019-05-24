@@ -24,6 +24,8 @@
      let*
      list? length
      if set! quote begin define-library define-syntax
-     cons car cdr eq? write-simple vector pair? symbol?
+     apply
+     cons car set-car! cdr set-cdr! eq? write-simple vector pair? symbol?
      caar cadr cdar cddr not null? list
+     assq
               ))

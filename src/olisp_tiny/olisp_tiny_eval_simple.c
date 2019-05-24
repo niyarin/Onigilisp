@@ -25,7 +25,7 @@
 #define SYNTAX_FX_NUMBER_EXPORT EBM_allocate_FX_NUMBER_CA(9)
 #define SYNTAX_FX_NUMBER_IR_MACRO_TRANSFORMER  EBM_allocate_FX_NUMBER_CA(10)
 #define SYNTAX_FX_NUMBER_DEFINE_SYNTAX  EBM_allocate_FX_NUMBER_CA(11)
-
+#define SYNTAX_FX_NUMBER_APPLY_SYNTAX_V EBM_allocate_FX_NUMBER_CA(12)
 
 #define SYNTAX_FX_NUMBER_SYNTACTIC_LSET EBM_allocate_FX_NUMBER_CA(97)
 
@@ -330,18 +330,102 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                     }
                 case SYNTAX_FX_NUMBER_COMPARE_SYMBOL:
                     {//TODO:eval_info baseに書き換える
-                        uintptr_t symb = EBM_CDR(EBM_CAR(lexical_information));
-                        uintptr_t syma = EBM_CDR(EBM_CADR(lexical_information));
+
+                        if (eval_info == EBM_NULL){
+                            eval_info = 
+                                EBM_allocate_pair(
+                                    EBM_CDR(code),
+                                    EBM_NULL,
+                                    allocator,
+                                    allocator_env);
+                            continue;
+                        }
+
+                        if (EBM_CAR(eval_info ) != EBM_NULL){
+                           stack = EBM_allocate_pair(
+                                       EBM_allocate_rev_list(
+                                           4,
+                                           allocator,
+                                           allocator_env,
+                                           lexical_information,
+                                           EBM_CDR(eval_info),
+                                           EBM_CAR(eval_info),
+                                           code
+                                           ),
+                                       stack,
+                                       allocator,
+                                       allocator_env);
+                           code = EBM_CAAR(eval_info);
+                           eval_info = EBM_NULL;
+                           continue;
+                        }
+
+                        uintptr_t symb = EBM_CADR(eval_info);
+                        uintptr_t syma = EBM_CAR(EBM_CDDR(eval_info));
                         if (syma == symb){
                             res = EBM_TRUE;
                         }else{
                             
-                            printf("TBA!\n");
+                            printf("TBA!");
+                            //write(syma,allocator,allocator_env);
+                            //write(symb,allocator,allocator_env);
                             //exit(1);
                             res = EBM_FALSE;//atode
                         }
+
                     }
                     break;
+
+                case SYNTAX_FX_NUMBER_APPLY_SYNTAX_V:
+                    {
+                        if (eval_info == EBM_NULL){
+                            eval_info = 
+                                EBM_allocate_pair(
+                                    EBM_CDR(code),
+                                    EBM_NULL,
+                                    allocator,
+                                    allocator_env);
+                            continue;
+                        }
+
+                        if (EBM_CAR(eval_info ) != EBM_NULL){
+                           stack = EBM_allocate_pair(
+                                       EBM_allocate_rev_list(
+                                           4,
+                                           allocator,
+                                           allocator_env,
+                                           lexical_information,
+                                           EBM_CDR(eval_info),
+                                           EBM_CAR(eval_info),
+                                           code
+                                           ),
+                                       stack,
+                                       allocator,
+                                       allocator_env);
+                           code = EBM_CAAR(eval_info);
+                           eval_info = EBM_NULL;
+                           continue;
+                        }
+
+                        eval_info = 
+                            EBM_allocate_pair(
+                                    EBM_NULL,
+                                    EBM_olisp_tiny_reverse_simple_function(
+                                            EBM_CADR(eval_info),
+                                            allocator,
+                                            allocator_env),
+                                    allocator,
+                                    allocator_env);
+
+                        code = EBM_allocate_rev_list(
+                                2,
+                                allocator,
+                                allocator_env,
+                                EBM_allocate_FX_NUMBER_CA(
+                                     EBM_simple_list_length_CR(
+                                        EBM_CDR(eval_info)) -1),
+                                EBM_NULL);
+                    }
                 case SYNTAX_FX_NUMBER_FRUN:
                     {
                         if (EBM_NULL == eval_info){
@@ -429,7 +513,9 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                                 allocator_env);
                                         break;
                                     }
-                                     
+
+                                    //TODO check arg size
+
                                     lexical_information = 
                                         EBM_allocate_pair(
                                             EBM_allocate_pair(
@@ -567,6 +653,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
             res = code;
             while (EBM_IS_RECORD_CR(res) 
                 && EBM_record_first(res) == global_ref_symbol){
+
                 res = EBM_vector_ref_CA(global,EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(res)));
             }
 
@@ -621,10 +708,9 @@ static uintptr_t _EBM_olisp_allocate_ir_macro_object(uintptr_t lambda,uintptr_t 
                                        state->allocator_env),
                                     state));
     EBM_record_primitive_set_CA(res,1,lambda);
-    EBM_record_primitive_set_CA(res,2,environment);   
-    EBM_record_primitive_set_CA(res,3,local_cell);   
+    EBM_record_primitive_set_CA(res,2,environment);
+    EBM_record_primitive_set_CA(res,3,local_cell);
     return res;
-
 }
 
 
@@ -1427,6 +1513,21 @@ static uintptr_t _EBM_olisp_tiny_expand_simple_internal(uintptr_t expression,uin
                     return EBM_UNDEF;
                             
                 }
+            case SYNTAX_FX_NUMBER_APPLY_SYNTAX_V:
+                {
+                    return 
+                        EBM_allocate_pair(
+                                SYNTAX_FX_NUMBER_APPLY_SYNTAX_V,
+                                _EBM_olisp_aux_recursive_expand_simple(
+                                    EBM_CDR(expression),
+                                    environment,
+                                    local_cell,
+                                    gc_interface,
+                                    state),
+                                gc_interface->allocator,
+                                gc_interface->env);
+               
+                }
             default:
                 {
                     uintptr_t tails = 
@@ -1713,10 +1814,10 @@ static uintptr_t  _EBM_olisp_tiny_set_library0_syntax(uintptr_t environment,EBM_
                 environment,
                 2);
 
-    char syntax_names[][21] = {"define","lambda","if","set!","quote","define-record-type","begin","define-library","import","export","ir-macro-transformer","define-syntax"};
+    char syntax_names[][21] = {"define","lambda","if","set!","quote","define-record-type","begin","define-library","import","export","ir-macro-transformer","define-syntax","apply-syntax-v"};
     int i;
     uintptr_t exports = EBM_vector_ref_CA(environment,5);
-    for (i=0;i<12;i++){
+    for (i=0;i<13;i++){
         uintptr_t sym = 
             OLISP_symbol_intern(
                 EBM_allocate_symbol_from_cstring_CA(syntax_names[i],gc_interface->allocator,gc_interface->env),

@@ -42,6 +42,16 @@ uintptr_t EBM_allocate_rev_list(int size,EBM_ALLOCATOR allocator,uintptr_t alloc
     return res;
 }
 
+uintptr_t EBM_simple_list_length_CR(uintptr_t ls){
+    uintptr_t res = 0;
+
+    while (ls != EBM_NULL){
+        ls = EBM_CDR(ls);
+        res++;
+    }
+    return res;
+}
+
 void EBM_free_wrapper(uintptr_t obj,uintptr_t env){
     free((void*)EBM_REMOVE_TYPE(obj));
 }
