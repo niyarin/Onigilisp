@@ -6,7 +6,7 @@
      (olisp-tiny base-library1)
      (olisp-tiny base-library2))
 
-   (export list? length)
+   (export list? length assq)
 
    (begin
      (define (list? obj);simple
@@ -23,5 +23,13 @@
            ((pair? ls) (loop (cdr ls) (fx+ cnt 1)))
            (else #f)
            )))
+
+     (define (assq obj alist)
+       (cond
+         ((null? alist) #f)
+         ((eq? obj (caar alist))
+          (car alist))
+         (else
+           (assq obj (cdr alist)))))
      ))
 
