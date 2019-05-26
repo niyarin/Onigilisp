@@ -25,6 +25,7 @@
      list? length
      if set! quote begin define-library define-syntax
      apply
+     for-each
      cons car set-car! cdr set-cdr! eq? write-simple vector pair? symbol?
      caar cadr cdar cddr not null? list
      assq
