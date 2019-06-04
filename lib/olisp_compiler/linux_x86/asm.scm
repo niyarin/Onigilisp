@@ -11,6 +11,21 @@
      (define *LOCAL-STACK-POSITION 2)
      (define *TMP-REGISTER 3)
 
+     (define (convert-ref position)
+       (cond 
+         ((eq? (car position) 'REGISTER)
+          (list 'REGISTER-REF (cadr position) 0))
+         ((eq? (car position) 'LOCAL)
+          (list 'LOCAL-REF (cadr position)))
+         (else (error "ERROR"))
+         ))
+   
+     (define (%encode-jmp-opecode asm-code)
+       (cond
+         ((eq? (caddr asm-code) '<=)
+          119)
+         (else (display asm-code)(newline)(error "TBA"))))
+
      (define (%encode-operand o1 o2)
        (cond
          ((and (not (pair? o1))
@@ -53,7 +68,16 @@
                     (cadr o1)
                     ))
                 (cadr (cdr o1))))
-         (else (error "TBA?"))
+         ((and
+            (eq? (car o1) 'REGISTER)
+            (eq? (car o2) 'REGISTER-REF)
+            (fx=? (caddr o2) 0))
+               (list
+                 (fx+
+                    (fxarithmetic-shift-left (cadr o1) 3)
+                    (cadr o2)
+                    )))
+         (else (error "TBA?" (list o1 o2)))
          ))
 
      (define (%calc-offset-size reg-ref)
@@ -94,6 +118,17 @@
                     *PTR-SIZE)
                   (caddr code))
                  ))
+
+           ((eq? (caadr code) 'LOCAL)
+               (list
+                  (list 
+                    'OLISP-COMPILER-MV
+                    (list 'LOCAL-REF (cadr (cadr code)))
+                    (caddr code))
+                  (list
+                    'OLISP-COMPILER-MV
+                    (convert-ref (caddr code))
+                    (caddr code))))
            ((eq? (car (caddr code)) 'LOCAL)
             (list
               (list
@@ -107,6 +142,30 @@
             ;lea ずらすedx edx
             ;MOV FROM,(edx)
             ))
+           ((eq? (car (cadr code)) 'MEMCHANK-REF)
+            (list;↑　あとでまとめる
+              
+                 (list
+                   'OLISP-COMPILER-MV
+                   (list 'ARG -1)
+                   (caddr code))
+
+                 (list
+                   'OLISP-COMPILER-MV
+                   (list 
+                     'REGISTER-REF 
+                     (cadr (caddr code)) 
+                     *PTR-SIZE)
+                   (caddr code));PTR[1] => eax
+
+                (list
+                  'OLISP-COMPILER-ADD
+                  (fx* 
+                    (cadr (cadr code))
+                    *PTR-SIZE)
+                  (caddr code))
+
+                 ))
           (else (error "TBA" code))
           ))
 
@@ -203,6 +262,55 @@
                               operands)
                           (set! index (fx+ index 1)))
                         ))))) 
+              (%cmpl-encode
+                (lambda (asm-code)
+                  (begin
+                    (cond 
+                      ((and;TODO:このcond節　未検証
+                         (not (pair? (caddr asm-code)))
+                         (fx<? (caddr asm-code) 256)
+                         (pair? (cadr asm-code))
+                         (eq? (car (cadr asm-code)) 'REGISTER))
+                       (begin
+                         (bytevector-u8-set!
+                          res
+                          index
+                          131)
+                         (bytevector-u8-set!
+                           res
+                           (fx+ index 1)
+                           (fx+
+                             248
+                             (cadr (cadr asm-code))))
+                         (bytevector-u8-set!
+                           res
+                           (fx+ index 2)
+                           (caddr asm-code))
+                         (set! index (fx+ index 2))))
+                      ((and
+                        (pair? (caddr asm-code))
+                        (pair? (cadr asm-code))
+                        (eq? (car (caddr asm-code)) 'REGISTER)
+                        (eq? (car (cadr asm-code)) 'REGISTER))
+
+                       (bytevector-u8-set!
+                         res
+                         index
+                         57)
+
+                       (set! index (fx+ index 1))
+                      
+                       (for-each
+                         (lambda (a)
+                           (begin
+                             (bytevector-u8-set! 
+                               res
+                               index
+                               a)
+                             (set! index (fx+ index 1))))
+                       (%encode-operand (cadr asm-code) (caddr asm-code))))
+                      (else (error "ERROR"))))))
+
               (%encode 
                 (lambda (asm-code)
                   (cond 
@@ -210,6 +318,34 @@
                         (%mv-encode asm-code))
                     ((eq? (car asm-code) 'OLISP-COMPILER-ADD)
                         (%add-encode asm-code))
+                    ((eq? (car asm-code) 'OLISP-COMPILER-CMPL)
+                        (%cmpl-encode asm-code)
+                     )
+
+                    ((eq? (car asm-code) 'OLISP-COMPILER-ALLOCATE)
+                     ;cmpl   $0x2,%ebx
+
+                     (%mv-encode
+                       (list
+                         'OLISP-COMPILER-MV
+                         (list
+                           'MEMCHANK-REF
+                           0)
+                         (list
+                           'REGISTER
+                           *TMP-REGISTER)))
+                     (begin;
+      
+
+                       )
+
+
+
+                     )
+                    ((eq? (car asm-code) 'OLISP-COMPILER-RET)
+                        (bytevector-u8-set! res index 93)
+                        (bytevector-u8-set! res (fx+ index 1) 195)
+                        (set! index (fx+ index 2)))
                     ((and (eq? (car asm-code) 'OLISP-COMPILER-PTR-REF)
                           (eq? (car (cadddr asm-code)) 'REGISTER)
                           (not (pair? (caddr asm-code))))
@@ -255,7 +391,7 @@
                                   (cadddr asm-code))))
                           (else (error "TBA"))))
                  (else 
-                   (write asm-code)
+                   (write asm-code)(newline)
                    (write "<===\n")
                    (error "TBA!!!!?"))
                );end cond
@@ -272,9 +408,37 @@
 
           (let loop ((code code))
             (unless (null? code)
-               (%encode (car code))
-               (loop 
-                 (cdr code))))
+               (cond
+                 ((eqv? (caar code) 'OLISP-COMPILER-JA)
+                  (begin
+                     (bytevector-u8-set!
+                       res
+                       index
+                       (%encode-jmp-opecode (car code)))
+                     (bytevector-u8-set!
+                       res
+                       (fx+ index 1)
+                       0)
+
+                     (let ((jmp-address-index (fx+ index 1))
+                           (loop-size (cadr (car code))));re18
+                       (set! index (fx+ index 2))
+                       (let loop-internal  ((code (cdr code))
+                                            (cnt 0))
+                         (if (fx=? cnt loop-size)
+                           (begin
+                              (bytevector-u8-set!
+                                res
+                                jmp-address-index
+                                (fx- (fx- index 1) jmp-address-index))
+                              (loop code))
+                           (begin
+                             (%encode (car code))
+                             (loop-internal (cdr code) (fx+ cnt 1))))))))
+                 (else
+                    (%encode (car code))
+                  (loop 
+                    (cdr code))))))
           (begin;POP EBP;RET;
             (bytevector-u8-set! res index 93)
             (bytevector-u8-set! res (fx+ index 1) 195)
@@ -282,26 +446,3 @@
             res
      ))))
 
-(import 
-  (scheme base)
-  (olisp-compiler linux-86 asm)
-  (scheme write))
-'(display 
-   (olisp-compiler-linux-x86-asm
-  '(
-    (OLISP-COMPILER-REF (ARG 0) 1 (REGISTER 0))
-
-    )))
-
-(display 
-  (olisp-compiler-linux-x86-asm
-      '(
-        ;(OLISP-COMPILER-MV (ARG 0) (REGISTER 0)) 
-        ;(OLISP-COMPILER-PTR-REF (REGISTER 0) 0 (REGISTER 0))
-        (OLISP-COMPILER-MV (REGISTER 0) (LOCAL 1)) 
-        ;(OLISP-COMPILER-MV (LOCAL 0) (REGISTER 0)) 
-        ;((OLISP-COMPILER-PTR-REF (REGISTER 0) 1 (REGISTER 0))) 
-        ;(OLISP-COMPILER-MV (REGISTER 0) (LOCAL 1)) 
-        ;(RET)
-        )))
-          
