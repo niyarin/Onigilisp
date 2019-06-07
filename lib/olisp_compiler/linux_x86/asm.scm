@@ -1,3 +1,5 @@
+;頭にPUSH EBX;末尾にPOP EBXいれたけど、もっと局所的にやったほうがよいかな..
+
 (define-library (olisp-compiler linux-86 asm)
    (import (scheme base)
            (scheme cxr)
@@ -26,6 +28,19 @@
           119)
          (else (display asm-code)(newline)(error "TBA"))))
 
+
+     (define (%encode-little-endiun num len)
+         (let loop ((num num)
+                    (cnt len))
+            
+               (if (fx=? cnt 0)
+                 '()
+                 (cons 
+                   (fxand 255 num)
+                   (loop 
+                     (fxarithmetic-shift-right cnt 3) 
+                     (fx- cnt 1))))))
+
      (define (%encode-operand o1 o2)
        (cond
          ((and (not (pair? o1))
@@ -36,6 +51,26 @@
                  (cadr o2))
              o1
              ))
+         ((and 
+            (eq? (car o1) 'CONST)
+            (eq? (car o2) 'REGISTER-REF))
+            
+            (if (fx=? (caddr o2) 0)
+              (cons
+                (cadr o2)
+                (%encode-little-endiun  (cadr o1) 4))
+              (cons
+                (fx+ 64 (cadr o2))
+                (cons;TODO:(caddr o2)が大きいケース
+                  (caddr o2)
+                  (%encode-little-endiun  (cadr o1) 4))
+              )))
+
+         ((and
+            (eq? (car o1) 'CONST)
+            (eq? (car o2) 'REGISTER))
+            (%encode-little-endiun (cadr o1) 4))
+
 
          ((and (eq? (car o1) 'REGISTER)
                (eq? (car o2) 'REGISTER))
@@ -77,6 +112,8 @@
                     (fxarithmetic-shift-left (cadr o1) 3)
                     (cadr o2)
                     )))
+
+
          (else (error "TBA?" (list o1 o2)))
          ))
 
@@ -118,6 +155,17 @@
                     *PTR-SIZE)
                   (caddr code))
                  ))
+         ((and 
+            (eq? (car (cadr code)) 'CONST)
+            (eq? (car (caddr code)) 'REGISTER-REF))
+          199)
+
+         ((and
+            (eq? (car (cadr code)) 'CONST)
+            (eq? (car (caddr code)) 'REGISTER))
+            (fx+
+               (cadr (caddr code))
+               184))
 
            ((eq? (caadr code) 'LOCAL)
                (list
@@ -142,6 +190,7 @@
             ;lea ずらすedx edx
             ;MOV FROM,(edx)
             ))
+
            ((eq? (car (cadr code)) 'MEMCHANK-REF)
             (list;↑　あとでまとめる
               
@@ -164,15 +213,16 @@
                     (cadr (cadr code))
                     *PTR-SIZE)
                   (caddr code))
-
                  ))
-          (else (error "TBA" code))
+          (else (error "TBA enc %mv opecode " code))
           ))
 
      (define (olisp-compiler-linux-x86-asm code)
 
        (letrec ((res (make-bytevector 128))
+              (jmp-addrs (make-vector 128))
               (index 0)
+              (insert-jmp #t)
               (%mv-encode
                 (lambda (mv-code);TODO:組み合わせによっては2回にわける
                   ;TODO:EBX (REGISTER 3) への書き込みはSTACKつかう
@@ -321,6 +371,17 @@
                     ((eq? (car asm-code) 'OLISP-COMPILER-CMPL)
                         (%cmpl-encode asm-code)
                      )
+                    ((eq? (car asm-code) 'OLISP-COMPILER-SET-CURRENT-POSITION-MEMORY)
+                        (vector-set! 
+                          jmp-addrs 
+                          (cadr asm-code) 
+                          (list 'CONST index))
+                     )
+                    ((eq? (car asm-code) 'OLISP-COMPILER-REF-CURRENT-MEMORY )
+                        (list
+                          'OLISP-COMPILER-MV
+                          (vector-ref jmp-addrs (cadr asm-code))
+                          (caddr asm-code)))
 
                     ((eq? (car asm-code) 'OLISP-COMPILER-ALLOCATE)
                      ;cmpl   $0x2,%ebx
@@ -338,14 +399,13 @@
       
 
                        )
-
-
-
                      )
                     ((eq? (car asm-code) 'OLISP-COMPILER-RET)
-                        (bytevector-u8-set! res index 93)
-                        (bytevector-u8-set! res (fx+ index 1) 195)
-                        (set! index (fx+ index 2)))
+
+                        (bytevector-u8-set! res index 91)
+                        (bytevector-u8-set! res (fx+ index 1)93)
+                        (bytevector-u8-set! res (fx+ index 2) 195)
+                        (set! index (fx+ index 3)))
                     ((and (eq? (car asm-code) 'OLISP-COMPILER-PTR-REF)
                           (eq? (car (cadddr asm-code)) 'REGISTER)
                           (not (pair? (caddr asm-code))))
@@ -406,6 +466,19 @@
             (bytevector-u8-set! res 2 229)
             (set! index 3))
 
+          (begin;PUSH EBX
+            (bytevector-u8-set! 
+              res
+              3
+              83)
+            (set! index 4))
+
+          (when insert-jmp
+            (bytevector-u8-set! res 4 235)
+            (bytevector-u8-set! res 5 0)
+            (set! index 6))
+   
+
           (let loop ((code code))
             (unless (null? code)
                (cond
@@ -439,6 +512,11 @@
                     (%encode (car code))
                   (loop 
                     (cdr code))))))
+
+          (begin ;POP EBX
+            (bytevector-u8-set! res index 91)
+            (set! index (fx+ index 1))
+            )
           (begin;POP EBP;RET;
             (bytevector-u8-set! res index 93)
             (bytevector-u8-set! res (fx+ index 1) 195)
@@ -446,3 +524,105 @@
             res
      ))))
 
+(import 
+  (scheme base)
+  (olisp-compiler linux-86 asm)
+  (scheme write))
+'(display 
+   (olisp-compiler-linux-x86-asm
+  '(
+    (OLISP-COMPILER-REF (ARG 0) 1 (REGISTER 0))
+
+    )))
+
+'(display 
+  (olisp-compiler-linux-x86-asm;CDAR
+      '(
+        (OLISP-COMPILER-MV (ARG 0) (REGISTER 0)) 
+        (OLISP-COMPILER-PTR-REF (REGISTER 0) 0 (REGISTER 0));CAR
+        (OLISP-COMPILER-MV (REGISTER 0) (LOCAL 0)) 
+        (OLISP-COMPILER-MV (REGISTER 0) (REGISTER 0)) 
+        (OLISP-COMPILER-MV (LOCAL 0) (REGISTER 0)) 
+        (OLISP-COMPILER-PTR-REF (REGISTER 0) 1 (REGISTER 0));CDR
+        ;(OLISP-COMPILER-MV (REGISTER 0) (LOCAL 1)) 
+        ;(RET)
+        )))
+ 
+(display "CADR = ")(newline)
+(display 
+  (olisp-compiler-linux-x86-asm;CDAR
+      '(
+        (OLISP-COMPILER-MV (ARG 0) (REGISTER 0)) 
+        (OLISP-COMPILER-PTR-REF (REGISTER 0) 0 (REGISTER 0));CAR
+        (OLISP-COMPILER-MV (REGISTER 0) (LOCAL 0)) 
+        (OLISP-COMPILER-MV (REGISTER 0) (REGISTER 0)) 
+        (OLISP-COMPILER-MV (LOCAL 0) (REGISTER 0)) 
+        (OLISP-COMPILER-PTR-REF (REGISTER 0) 1 (REGISTER 0));CDR
+        ;(OLISP-COMPILER-MV (REGISTER 0) (LOCAL 1)) 
+        ;(RET)
+        )))
+(newline)
+
+(display "SET CONST TO REGISTER TEST")(newline)
+(display
+  (olisp-compiler-linux-x86-asm
+    '((OLISP-COMPILER-MV (CONST 3) (REGISTER 0)))
+    ))
+(newline)
+
+
+'(display 
+  (olisp-compiler-linux-x86-asm
+      '(
+        (OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+        ;(OLISP-COMPILER-MV (REGISTER-REF 0 0) (REGISTER 0))
+        ;(OLISP-COMPILER-MV (CONST 1) (REGISTER-REF 0 12))
+        )))
+
+(display 
+  (olisp-compiler-linux-x86-asm
+      '(
+        ;(OLISP-COMPILER-ALLOCATE 2 (REGISTER 0))
+        (OLISP-COMPILER-MV (MEMCHANK-REF 0) (REGISTER 0))
+        (OLISP-COMPILER-MV (REGISTER-REF 0 0) (REGISTER 0))
+
+        (OLISP-COMPILER-MV (MEMCHANK-REF 1) (REGISTER 3))
+        (OLISP-COMPILER-MV (REGISTER-REF 3 0) (REGISTER 3))
+        (OLISP-COMPILER-SET-CURRENT-POSITION-MEMORY 1)
+        (OLISP-COMPILER-CMPL (REGISTER 0) (REGISTER 3))
+
+        (OLISP-COMPILER-JA 5 <=)
+
+        (OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+        (OLISP-COMPILER-REF-CURRENT-MEMORY 1 (REGISTER-REF 0 8))
+
+        (OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+        (OLISP-COMPILER-MV (CONST 1) (REGISTER-REF 0 12))
+        (OLISP-COMPILER-RET)
+        ;END
+        (OLISP-COMPILER-MV (REGISTER 3) (REGISTER 0))
+        )))
+
+
+'(display 
+  (olisp-compiler-linux-x86-asm
+      '(
+        ;(OLISP-COMPILER-ALLOCATE 2 (REGISTER 0))
+        (OLISP-COMPILER-MV (MEMCHANK-REF 0) (REGISTER 0))
+        (OLISP-COMPILER-MV (REGISTER-REF 0 0) (REGISTER 0))
+        (OLISP-COMPILER-MV (MEMCHANK-REF 1) (REGISTER 3))
+        (OLISP-COMPILER-MV (REGISTER-REF 3 0) (REGISTER 3))
+        ;(OLISP-COMPILER-SET-CURRENT-POSITION-MEMORY 1)
+        (OLISP-COMPILER-CMPL (REGISTER 0) (REGISTER 3))
+        (OLISP-COMPILER-JA 5 <=)
+        ;TODO:set position
+        (OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+        (OLISP-COMPILER-REF-CURRENT-MEMORY 1 (REGISTER-REF 0 12))
+
+        ;TODO set status
+        (OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+        (OLISP-COMPILER-MV (CONST 1) (REGISTER-REF 0 12))
+        (OLISP-COMPILER-RET)
+        ;END
+        (OLISP-COMPILER-MV (REGISTER 3) (REGISTER 0))
+        )))
