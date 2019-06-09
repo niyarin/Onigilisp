@@ -14,7 +14,7 @@
      (define *TMP-REGISTER 3)
 
      ;quasi-quoteがまだないよ
-     (define (%create-allocate-code size)
+     (define (%create-allocate-code size target)
        (list
         '(OLISP-COMPILER-SET-CURRENT-POSITION-MEMORY 1)
 
@@ -41,6 +41,9 @@
 
         (list 'OLISP-COMPILER-MV '(MEMCHANK-REF 0) (list 'REGISTER *TMP-REGISTER))
         (list 'OLISP-COMPILER-ADD '(REGISTER 0) (list 'REGISTER *TMP-REGISTER))
+      
+        (list 'OLISP-COMPILER-MV '(REGISTER 0) target)
+
        ))
 
 
@@ -534,7 +537,7 @@
                  ((eq? (caar code) 'OLISP-COMPILER-ALLOCATE)
                      (loop 
                         (append
-                          (%create-allocate-code (cadar code))
+                          (%create-allocate-code (cadar code) (caddar code))
                           (cdr code))))
                  (else
                     (%encode (car code))
