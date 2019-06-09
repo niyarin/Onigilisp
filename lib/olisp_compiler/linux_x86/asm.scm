@@ -40,9 +40,13 @@
         (list 'OLISP-COMPILER-MV '(REGISTER 1) (list 'REGISTER-REF *TMP-REGISTER 0))
 
         (list 'OLISP-COMPILER-MV '(MEMCHANK-REF 0) (list 'REGISTER *TMP-REGISTER))
+
+        (list 'OLISP-COMPILER-LSHIFT '(REGISTER 0) '(CONST  2))
         (list 'OLISP-COMPILER-ADD '(REGISTER 0) (list 'REGISTER *TMP-REGISTER))
       
         (list 'OLISP-COMPILER-MV '(REGISTER 0) target)
+        '(OLISP-COMPILER-MV (REGISTER 3) (REGISTER 0))
+
 
        ))
 
@@ -292,8 +296,8 @@
                                (internal-loop (cdr encoded-operands))))))
                       ))))
 
-              (%shr-encode
-                (lambda (register)
+              (%shift-encode
+                (lambda (register reg)
                      (begin ;SHR 2 REG;
                        (bytevector-u8-set! 
                          res
@@ -305,15 +309,19 @@
                          (fx+
                            register
                            224
-                           )
-                         )
+                           ))
                        (bytevector-u8-set! 
                          res
                          (fx+ index 2)
-                         2)
+                         reg)
                        (set!
                          index
                          (+ index 3)))))
+
+              (%shift2-encode
+                (lambda (register)
+                  (%shit-encode register 2)
+                     ))
               (%add-encode
                 (lambda (asm-code)
                   (begin
@@ -425,6 +433,12 @@
                           'OLISP-COMPILER-MV
                           (vector-ref jmp-addrs (cadr asm-code))
                           (caddr asm-code)))
+                    ((eq? (car asm-code) 'OLISP-COMPILER-LSHIFT)
+                     (cond
+                       ((and (eq? (caadr asm-code) 'REGISTER)
+                             (eq? (caaddr asm-code) 'CONST))
+                           (%shift-encode (cadadr asm-code) (cadr (caddr asm-code))))
+                       (else (error "ERROR"))))
 
                     ((eq? (car asm-code) 'OLISP-COMPILER-RET)
                         (bytevector-u8-set! res index 91)
@@ -437,11 +451,11 @@
                           (not (pair? (caddr asm-code))))
                         (cond 
                           ((eq? (caadr asm-code) 'REGISTER)
-                              (%shr-encode
+                              (%shift2-encode
                                 (fx+
                                  (cadr (cadr asm-code))
                                  8))
-                              (%shr-encode
+                              (%shift2-encode
                                  (cadr (cadr asm-code)))
                               (%mv-encode
                                 (list
@@ -459,11 +473,11 @@
                                   'OLISP-COMPILER-MV
                                   (cadr asm-code)
                                   (cadddr asm-code)))
-                              (%shr-encode
+                              (%shift2-encode
                                 (fx+
                                  (cadr (cadddr asm-code))
                                  8))
-                              (%shr-encode
+                              (%shift2-encode
                                  (cadr (cadddr asm-code)))
                               (%mv-encode
                                 (list
