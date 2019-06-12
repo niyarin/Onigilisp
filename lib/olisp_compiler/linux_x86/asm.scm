@@ -45,9 +45,6 @@
         (list 'OLISP-COMPILER-ADD '(REGISTER 0) (list 'REGISTER *TMP-REGISTER))
       
         (list 'OLISP-COMPILER-MV '(REGISTER 0) target)
-        '(OLISP-COMPILER-MV (REGISTER 3) (REGISTER 0))
-
-
        ))
 
 
@@ -320,7 +317,7 @@
 
               (%shift2-encode
                 (lambda (register)
-                  (%shit-encode register 2)
+                  (%shift-encode register 2)
                      ))
               (%add-encode
                 (lambda (asm-code)
@@ -428,11 +425,30 @@
                           (cadr asm-code) 
                           (list 'CONST index))
                      )
+                    ((eq? (car asm-code) 'OLISP-COMPILER-PTR-PRIMITIVE-SET )
+                     (if ;無駄が多い あとで修正
+                        (eq? (car (caddr  asm-code)) 'CONST)
+                           (for-each
+                              %encode
+                              (list 
+                                (list 'OLISP-COMPILER-MV (cadr asm-code) (list 'REGISTER *TMP-REGISTER))
+                                (list 
+                                    'OLISP-COMPILER-ADD 
+                                   (fx* (cadr (caddr asm-code)) *PTR-SIZE)
+                                   (list 'REGISTER *TMP-REGISTER))
+                                (list
+                                  'OLISP-COMPILER-MV
+                                  (cadddr asm-code)
+                                 (list 'REGISTER-REF *TMP-REGISTER 0))
+                                ))
+                        (error "TBA"))
+                     )
                     ((eq? (car asm-code) 'OLISP-COMPILER-REF-CURRENT-MEMORY )
                         (list
                           'OLISP-COMPILER-MV
                           (vector-ref jmp-addrs (cadr asm-code))
                           (caddr asm-code)))
+
                     ((eq? (car asm-code) 'OLISP-COMPILER-LSHIFT)
                      (cond
                        ((and (eq? (caadr asm-code) 'REGISTER)
@@ -440,11 +456,26 @@
                            (%shift-encode (cadadr asm-code) (cadr (caddr asm-code))))
                        (else (error "ERROR"))))
 
+                    ((eq? (car asm-code) 'OLISP-COMPILER-RSHIFT)
+                     (cond
+                       ((and (eq? (caadr asm-code) 'REGISTER)
+                             (eq? (caaddr asm-code) 'CONST))
+                           (%shift-encode (fx+ (cadadr asm-code) 8) (cadr (caddr asm-code))))
+                       (else (error "ERROR"))))
+
                     ((eq? (car asm-code) 'OLISP-COMPILER-RET)
                         (bytevector-u8-set! res index 91)
                         (bytevector-u8-set! res (fx+ index 1)93)
                         (bytevector-u8-set! res (fx+ index 2) 195)
                         (set! index (fx+ index 3)))
+
+                    ((eq? (car asm-code) 'OLISP-COMPILER-REMOVE-TYPE)
+                              (%shift2-encode
+                                (fx+
+                                 (cadr (cadr asm-code))
+                                 8))
+                              (%shift2-encode
+                                 (cadr (cadr asm-code))))
 
                     ((and (eq? (car asm-code) 'OLISP-COMPILER-PTR-REF)
                           (eq? (car (cadddr asm-code)) 'REGISTER)
