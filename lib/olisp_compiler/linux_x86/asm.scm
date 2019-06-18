@@ -77,14 +77,21 @@
             (list 'OLISP-COMPILER-PUSH target4)
 
             '(OLISP-COMPILER-ALLOCATE 2 (REGISTER 1))
-            '(OLISP-COMPILER-PUSH (REGISTER 1))
+
             '(OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
             (list 'OLISP-COMPILER-ADD (fx* *PTR-SIZE 4) '(REGISTER 0))
+
+            '(OLISP-COMPILER-MV (REGISTER-REF 0 0) (REGISTER 0))
             '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 1) (REGISTER 0))
-            '(OLISP-COMPILER-ALLOCATE 3 (REGISTER 0))
+
+            '(OLISP-COMPILER-PUSH (REGISTER 1))
+
+            '(OLISP-COMPILER-ALLOCATE 4 (REGISTER 0))
             
             '(OLISP-COMPILER-POP (REGISTER 1))
+
             '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 0) (REGISTER 0))
+            '(OLISP-COMPILER-MV (REGISTER 0) (REGISTER 1))
 
 
             '(OLISP-COMPILER-POP (REGISTER 0))
@@ -93,7 +100,7 @@
             '(OLISP-COMPILER-POP (REGISTER 0))
             '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 2) (REGISTER 0))
 
-            '(OLISP-COMPILER-POP-ONLY-REGISTER (REGISTER 0))
+            '(OLISP-COMPILER-POP (REGISTER 0))
             '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 1) (REGISTER 0))
 
             '(OLISP-COMPILER-POP (REGISTER 0))
@@ -209,6 +216,9 @@
 
      (define (%encode-opecode-mov code)
        (cond
+          ((and (eq? (car (cadr code)) 'REGISTER);REGISTER以外にもいけるだろう
+               (%mem-compare? (cadr code) (caddr code)))
+               '())
           ((or 
              (and (eq? (car (cadr code)) 'REGISTER)
                   (eq? (car (caddr code)) 'REGISTER))
@@ -301,7 +311,7 @@
 
      (define (olisp-compiler-linux-x86-asm code)
 
-       (letrec ((res (make-bytevector 1024))
+       (letrec ((res (make-bytevector 512))
               (jmp-addrs (make-vector 128))
               (index 0)
               (insert-jmp #t)
@@ -311,6 +321,8 @@
                   (let ((mov-code 
                         (%encode-opecode-mov mv-code)))
                     (cond
+                      ((null? mov-code) 
+                       #t)
                       ((pair? mov-code) 
                        (begin
                        (for-each
@@ -732,10 +744,15 @@
 
 (display 
   (olisp-compiler-linux-x86-asm
-    '(
+    `(
       (OLISP-COMPILER-ALLOCATE 3 (REGISTER 0))
-      (OLISP-COMPILER-WRITE-BARRIER (REGISTER 0) (CONST 1) (CONST 2) (CONST 3))
+ 
 
+      (OLISP-COMPILER-WRITE-BARRIER (REGISTER 0) (CONST 1) (CONST 2) (CONST 3))
+      (OLISP-COMPILER-ALLOCATE 2 (REGISTER 0))
+      (OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 0) (CONST 0) (CONST 32))
+      (OLISP-COMPILER-ADD  1 (REGISTER 0))
       )
   ))
   
+
