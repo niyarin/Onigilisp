@@ -1,5 +1,17 @@
 ;頭にPUSH EBX;末尾にPOP EBXいれたけど、もっと局所的にやったほうがよいかな..
 
+;仕様っぽもの
+
+; <MEM> レジスタ ローカル スタック 引数
+;
+; syntax list
+;
+; OLISP-COMPILER-MV <MEM>/<CONST-EXPRESSION>  <MEM>
+;
+
+
+
+
 (define-library (olisp-compiler linux-86 asm)
    (import (scheme base)
            (scheme cxr)
@@ -12,6 +24,14 @@
      (define *STACK-HEAD 3)
      (define *LOCAL-STACK-POSITION 2)
      (define *TMP-REGISTER 3)
+
+
+     (define (%mem-compare? a b)
+       (cond
+         ((eqv? a b) #t)
+         ((not (and (pair? a) (pair? b))) #f)
+         ((not (eqv? (car a) (cdr b))) #f)
+         (else (%mem-compare? (cdr a) (cdr b)))))
 
      ;quasi-quoteがまだないよ
      (define (%create-allocate-code size target)
@@ -47,6 +67,38 @@
         (list 'OLISP-COMPILER-MV '(REGISTER 0) target)
        ))
 
+
+     (define (%create-write-write-info target1 target2 target3 target4)
+
+          (list
+            (list 'OLISP-COMPILER-PUSH target1)
+            (list 'OLISP-COMPILER-PUSH target2)
+            (list 'OLISP-COMPILER-PUSH target3)
+            (list 'OLISP-COMPILER-PUSH target4)
+
+            '(OLISP-COMPILER-ALLOCATE 2 (REGISTER 1))
+            '(OLISP-COMPILER-PUSH (REGISTER 1))
+            '(OLISP-COMPILER-MV (ARG -1) (REGISTER 0))
+            (list 'OLISP-COMPILER-ADD (fx* *PTR-SIZE 4) '(REGISTER 0))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 1) (REGISTER 0))
+            '(OLISP-COMPILER-ALLOCATE 3 (REGISTER 0))
+            
+            '(OLISP-COMPILER-POP (REGISTER 1))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 0) (REGISTER 0))
+
+
+            '(OLISP-COMPILER-POP (REGISTER 0))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 3) (REGISTER 0))
+
+            '(OLISP-COMPILER-POP (REGISTER 0))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 2) (REGISTER 0))
+
+            '(OLISP-COMPILER-POP-ONLY-REGISTER (REGISTER 0))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 1) (REGISTER 0))
+
+            '(OLISP-COMPILER-POP (REGISTER 0))
+            '(OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 0) (REGISTER 0))
+          ));END
 
      (define (convert-ref position)
        (cond 
@@ -219,12 +271,7 @@
                 (list 'LOCAL-REF (cadr (caddr code)))
                 (list 'REGISTER *TMP-REGISTER))
 
-              (list 'OLISP-COMPILER-MV (cadr code) (list 'REGISTER-REF *TMP-REGISTER 0))
-            ;stack 1 をedxにおく
-            ;MV (edx) edx
-            ;lea ずらすedx edx
-            ;MOV FROM,(edx)
-            ))
+              (list 'OLISP-COMPILER-MV (cadr code) (list 'REGISTER-REF *TMP-REGISTER 0))))
 
            ((eq? (car (cadr code)) 'MEMCHANK-REF)
             (list;↑　あとでまとめる
@@ -254,12 +301,12 @@
 
      (define (olisp-compiler-linux-x86-asm code)
 
-       (letrec ((res (make-bytevector 128))
+       (letrec ((res (make-bytevector 1024))
               (jmp-addrs (make-vector 128))
               (index 0)
               (insert-jmp #t)
               (%mv-encode
-                (lambda (mv-code);TODO:組み合わせによっては2回にわける
+                (lambda (mv-code)
                   ;TODO:EBX (REGISTER 3) への書き込みはSTACKつかう
                   (let ((mov-code 
                         (%encode-opecode-mov mv-code)))
@@ -419,6 +466,51 @@
                     ((eq? (car asm-code) 'OLISP-COMPILER-CMPL)
                         (%cmpl-encode asm-code))
 
+                    ((eq? (car asm-code) 'OLISP-COMPILER-PUSH)
+                     (cond
+                       ((eq? (caadr asm-code) 'REGISTER)
+                          (begin
+                            (bytevector-u8-set!
+                              res
+                              index
+                              (fx+
+                                80
+                                (cadr (cadr asm-code))))
+                            (set! index (fx+ index 1))))
+                       ((eq? (caadr asm-code) 'CONST)
+                           (begin
+                               (bytevector-u8-set!
+                                 res
+                                 index
+                                 104)
+
+                               (set! index (fx+ index 1));
+                              
+                               (for-each
+                                 (lambda (x)
+                                   (begin
+                                     (bytevector-u8-set!
+                                       res
+                                       index
+                                       x)
+                                     (set! index (fx+ index 1))))
+                                  (%encode-little-endiun (cadadr asm-code) 4))
+
+                        ))
+                       (else (error "TBA!" asm-code))))
+
+                    ((eq? (car asm-code) 'OLISP-COMPILER-POP)
+                     (if (eq? (caadr asm-code) 'REGISTER)
+                       (begin
+                         (bytevector-u8-set!
+                           res
+                           index
+                           (fx+
+                             88
+                             (cadr (cadr asm-code))))
+                         (set! index (fx+ index 1)))
+                       (error "TBA!")))
+
                     ((eq? (car asm-code) 'OLISP-COMPILER-SET-CURRENT-POSITION-MEMORY)
                         (vector-set! 
                           jmp-addrs 
@@ -426,8 +518,8 @@
                           (list 'CONST index))
                      )
                     ((eq? (car asm-code) 'OLISP-COMPILER-PTR-PRIMITIVE-SET )
-                     (if ;無駄が多い あとで修正
-                        (eq? (car (caddr  asm-code)) 'CONST)
+                     (if (eq? (car (caddr  asm-code)) 'CONST)
+                       ;無駄が多い あとで修正
                            (for-each
                               %encode
                               (list 
@@ -448,6 +540,18 @@
                           'OLISP-COMPILER-MV
                           (vector-ref jmp-addrs (cadr asm-code))
                           (caddr asm-code)))
+
+                    ((eq? (car asm-code) 'OLISP-COMPILER-PUSH-ONLY-REGISTER )
+                        (when (eq? (caadr asm-code) 'REGISTER) 
+                          (%encode 
+                            (cons 'OLISP-COMPILER-PUSH
+                                  (cdr asm-code)))))
+
+                    ((eq? (car asm-code) 'OLISP-COMPILER-POP-ONLY-REGISTER )
+                        (when (eq? (caadr asm-code) 'REGISTER) 
+                          (%encode 
+                            (cons 'OLISP-COMPILER-POP
+                                  (cdr asm-code)))))
 
                     ((eq? (car asm-code) 'OLISP-COMPILER-LSHIFT)
                      (cond
@@ -584,6 +688,16 @@
                         (append
                           (%create-allocate-code (cadar code) (caddar code))
                           (cdr code))))
+                 ((eq? (caar code) 'OLISP-COMPILER-WRITE-BARRIER)
+                     (loop 
+                       (append 
+                         (%create-write-write-info 
+                           (cadr (car code)) 
+                           (caddr (car code))
+                           (cadddr (car code))
+                           (cadr (cdddar code))
+                           )
+                         (cdr code))))
                  (else
                     (%encode (car code))
                   (loop 
@@ -600,3 +714,28 @@
             res
      ))))
 
+(import (scheme base)
+        (scheme write)
+        (olisp-compiler  linux-86 asm))
+
+(display "ALLOCATE")(newline)
+'(display 
+  (olisp-compiler-linux-x86-asm 
+    '(
+      (OLISP-COMPILER-ALLOCATE 2 (REGISTER 0))
+      (OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 0) (CONST 0) (CONST 32))
+      (OLISP-COMPILER-PTR-PRIMITIVE-SET (REGISTER 1) (CONST 0) (CONST 0))
+      (OLISP-COMPILER-ADD 1 (REGISTER 0))
+
+
+            )))
+
+(display 
+  (olisp-compiler-linux-x86-asm
+    '(
+      (OLISP-COMPILER-ALLOCATE 3 (REGISTER 0))
+      (OLISP-COMPILER-WRITE-BARRIER (REGISTER 0) (CONST 1) (CONST 2) (CONST 3))
+
+      )
+  ))
+  
