@@ -296,7 +296,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                             res = EBM_CADR(eval_info);
                             eval_info = EBM_NULL;
                         }else{
-                           if (OLISP_TINY_SIMPLE_CAN_EVAL(EBM_CAAR(eval_info))){
+                           
                                 stack = EBM_allocate_pair(
                                    EBM_allocate_rev_list(
                                        4,
@@ -312,19 +312,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
                                 code = EBM_CAAR(eval_info);
                                 eval_info = EBM_NULL;
                                 continue;         
-                           }else{
-                               eval_info = 
-                                   EBM_allocate_pair(
-                                           EBM_CDAR(eval_info),
-                                           EBM_allocate_pair(
-                                               EBM_CAAR(eval_info),
-                                               EBM_CDR(eval_info),
-                                               allocator,
-                                               allocator_env),
-                                           allocator,
-                                           allocator_env);
-                               continue;
-                           } 
+                            
                         }
                         break;
                     }
@@ -656,6 +644,7 @@ uintptr_t EBM_olisp_eval_simple(uintptr_t expanded_expression,uintptr_t environm
 
                 res = EBM_vector_ref_CA(global,EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_record_second(res)));
             }
+
 
 OLISP_CINTERFACE_TYPE_CHECK_BLOCK{
             if (res == EBM_UNDEF){
