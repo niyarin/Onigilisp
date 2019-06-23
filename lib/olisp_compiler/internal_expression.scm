@@ -1,4 +1,4 @@
-(include "./base.scm")
+;(include "./base.scm")
 
 (define-library (olisp-compiler internal-expression)
    (import (scheme base) (olisp-compiler base))
@@ -14,19 +14,30 @@
            ((eq? (car expression) 'quote)
             (list expression))
            ((eq? (car expression) 'lambda)
-            (list (scm-hu-cps (caddr scm-code))))
+            (let ((new-sym (gen-my-sym)))
+              (list
+                 (list
+                   'lambda
+                   (cons new-sym (cadr expression))
+                  (olisp-compiler-cps-conv 
+                    (car (cddr expression))
+                    (list 'cont-symbol new-sym)
+                    )))))
            (else 
              #f)))
 
-      (define (olisp-compiler-cps-conv scm-code)
+      (define (olisp-compiler-cps-conv scm-code . opt)
          (cond 
            ((not-have-continuation? scm-code) =>  car)
            (else
               (let conv-loop ((code scm-code)
-                              (continuation-symbol  OLISP-COMPILER-RETURN-TO-GLOBAL)
+                              (continuation-symbol  
+                                (cond
+                                  ((assq 'cont-symbol opt) => cadr)
+                                  (else OLISP-COMPILER-RETURN-TO-GLOBAL)))
                               (stack '()))
                (cond
-                 ((and (eq? (car code) `if)
+                 ((and (eq? (car code) 'if)
                        (not-have-continuation? (cadr code))) 
                   => (lambda (test-expression)
                        (set-car! (cdr code) (car test-expression))
@@ -43,7 +54,9 @@
                        ((null? ls)
                         (set-cdr!
                           code
-                          (cons `(lambda (,(caar stack))  ,(conv-loop (cdar stack) continuation-symbol (cdr stack))) (cdr code)))
+                          ;(cons `(lambda (,(caar stack))  ,(conv-loop (cdar stack) continuation-symbol (cdr stack))) (cdr code))
+                          (cons (list 'lambda (list (caar stack)) (conv-loop (cdar stack) continuation-symbol (cdr stack))) (cdr code))
+                          )
                         code)
                         
                        ((not-have-continuation? (car ls))
