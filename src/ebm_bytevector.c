@@ -7,18 +7,18 @@ uintptr_t EBM_allocate_byte_vector_CA(uintptr_t size,EBM_ALLOCATOR allocator,uin
                   EBM_BUILT_IN_RECORD_TYPE_BYTE_VECTOR);
     unsigned char* bytes = (unsigned char*)allocator(size,allocator_env);
 
-    EBM_record_primitive_set_CA(res,1,bytes);
+    EBM_record_primitive_set_CA(res,1,(uintptr_t)bytes);
     EBM_record_primitive_set_CA(res,2,size);
     return res;
 }
 
 uintptr_t EBM_byte_vector_ref_CACR(uintptr_t byte_vector,uintptr_t index){
-    unsigned char* bytes = EBM_record_ref_CA(byte_vector,1);
+    unsigned char* bytes = (unsigned char*)EBM_record_ref_CA(byte_vector,1);
     return bytes[index];
 }
 
 uintptr_t EBM_byte_vector_set_CA(uintptr_t byte_vector,uintptr_t index,unsigned char num){
-    unsigned char* bytes = EBM_record_ref_CA(byte_vector,1);
+    unsigned char* bytes = (unsigned char*)EBM_record_ref_CA(byte_vector,1);
     bytes[index] = num;
     return EBM_UNDEF;
 }
