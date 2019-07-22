@@ -47,7 +47,7 @@ OLISP_state olisp_state;
 uintptr_t gc_allocator_env;
 EBM_GC_INTERFACE gc_interface;
 
-void test1(){
+int test1(){
     uintptr_t p1 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
     uintptr_t p2 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
 
@@ -58,11 +58,102 @@ void test1(){
 
     uintptr_t p4 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
 
+
+    //初回だけはこの順
     if (p1 == p4 && p2 == p3){
         printf("TEST1:OK\n");
+        return 1;
     }else{
         printf("TEST1:NG\n");
+        return 0;
     }
+}
+
+void test2(){
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+     uintptr_t p1 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+     uintptr_t p2 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+
+    uintptr_t p3 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    uintptr_t p4 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+    
+    if (p1 == p3 && p2 == p4){
+        printf("TEST2:OK\n");
+        return 1;
+    }else{
+        printf("TEST2:NG\n");
+        return 0;
+    }
+}
+
+void test3(){
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+     uintptr_t p1 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+     uintptr_t p2 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+
+    EBM_olisp_tiny_gc_full_mark(p1,gc_allocator_env);
+    EBM_olisp_tiny_gc_full_mark(p2,gc_allocator_env);
+
+    EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+
+    uintptr_t p3 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    uintptr_t p4 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    if (p1 != p3 && p1 != p4 && p2 != p3 && p2 != p4){
+        printf("TEST3:OK\n");
+        return 1;
+    }else{
+        printf("TEST3:NG\n");
+        return 0;
+    }
+}
+
+void test4(){
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+
+
+     uintptr_t p1 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+     uintptr_t p2 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+     EBM_olisp_tiny_gc_full_mark(p2,gc_allocator_env);
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+
+    uintptr_t p3 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    uintptr_t p4 = EBM_allocate_pair(EBM_TRUE,EBM_FALSE,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    if (p1 != p3 && p1 != p4 && p2 != p3 && p2 != p4){
+        printf("TEST4:OK\n");
+        return 1;
+    }else{
+        printf("TEST4:NG\n");
+        return 0;
+    }
+
+}
+
+void test5(){
+
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+    uintptr_t v1 = EBM_allocate_vector_CA(3,EBM_olisp_tiny_allocate,gc_allocator_env);
+     EBM_olisp_tiny_gc_full_mark(v1,gc_allocator_env);
+     EBM_olisp_tiny_gc_full_free(gc_allocator_env);
+
+    uintptr_t v2 = EBM_allocate_vector_CA(3,EBM_olisp_tiny_allocate,gc_allocator_env);
+
+    if (v1 != v2){
+        printf("TEST5:OK\n");
+        return 1;
+    }else{
+        printf("TEST5:NG\n");
+        return 1;
+    }
+    
 }
 
 int main(void){
@@ -76,6 +167,13 @@ int main(void){
 
     olisp_state_setup(&olisp_state,gc_allocator_env,&gc_interface);
 
-    test1();
+    printf("INTY GC TEST\n");
+    {
+        test1();
+        test2();
+        test3();
+        test4();
+        test5();
+    }
     return 0;
 }
