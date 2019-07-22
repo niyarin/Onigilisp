@@ -5,6 +5,7 @@ uintptr_t EBM_malloc_wrapper(size_t size,uintptr_t env){
     void* res =  malloc(size);
     if (EBM_COPT_UNLIKELY(res == NULL)){
         //TODO: OUTPUT ERROR MESSAGE.
+        printf("MALLOC ERROR\n");
         exit(1);
     }
     return (uintptr_t)res;
@@ -151,7 +152,7 @@ uintptr_t EBM_object_heap_size_CR(uintptr_t object){
                 return sizeof(uintptr_t) * 3;
 
             case EBM_BUILT_IN_RECORD_TYPE_VECTOR:
-                return sizeof(uintptr_t) * (EBM_vector_ref_CA(object,1)+2);
+                return sizeof(uintptr_t) * (EBM_record_ref_CA(object,1)+3);
             default:
                 break;
         }
