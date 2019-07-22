@@ -17,7 +17,7 @@
 
 
 #define _INFINTY32 1000000000
-
+//TODO:FULL MARK で greyをちゃんとやる
 
 static uintptr_t EBM_allocate_olisp_tiny_gc_pool(uintptr_t size,EBM_ALLOCATOR parent_allocator,uintptr_t parent_allocator_env);
 
@@ -245,7 +245,7 @@ static uintptr_t EBM_olisp_gc_search_all_static_size_pools(uintptr_t ptr,uintptr
 static uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintptr_t env_ptr,int counter_for_old_arenas,uint32_t target_bit){
     //target_bit  = (0b01 or 0b10)
     olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
-
+printf("SIZE=%ld\n",size);
    uintptr_t arena = env->arena;
    while (counter_for_old_arenas && arena != EBM_NULL){
        if (size == 0){
@@ -283,6 +283,7 @@ static uintptr_t EBM_olisp_gc_mark_and_check(uintptr_t ptr,uintptr_t size,uintpt
            }else{
               //TODO:
               //large size
+              //printf("SKIP\n");
            }
        }
        arena = EBM_vector_ref_CA(arena,4);
@@ -351,7 +352,7 @@ uintptr_t EBM_olisp_tiny_gc_free(uintptr_t object,uintptr_t env_ptr){
                     uintptr_t heap_start_ptr = EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START ));
 
                    if (heap_start_ptr <= ptr && ptr < EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_END))){
-
+                        //TODO:未実装?
                    }
                    pool = EBM_vector_ref_CA(pool,OLISP_TINY_GC_NEXT_POOL);
                }
@@ -372,3 +373,121 @@ uintptr_t EBM_olisp_tiny_gc_write_barrier(uintptr_t object,uintptr_t setted_obje
     return 0;
 }
 
+
+uintptr_t EBM_olisp_tiny_gc_full_mark(uintptr_t object,uintptr_t env_ptr){
+    if (EBM_IS_PAIR_CR(object)){
+        
+        //探索済みならさらにスキャンさせない
+        if (EBM_olisp_gc_mark_and_check_black(EBM_REMOVE_TYPE(object),sizeof(uintptr_t)*2, env_ptr,_INFINTY32) == 0){
+            return;
+        }
+        EBM_olisp_tiny_gc_full_mark(EBM_CAR(object),env_ptr);
+        EBM_olisp_tiny_gc_full_mark(EBM_CDR(object),env_ptr);
+    }else if (EBM_IS_RECORD_CR(object)){
+        if (EBM_olisp_gc_mark_and_check_black(EBM_REMOVE_TYPE(object), EBM_olisp_gc_count_valid_bit(EBM_object_heap_size_CR(object)), env_ptr,_INFINTY32) == 0){
+            return;
+        }
+
+        switch(EBM_record_ref_CA(object,0)){
+            case EBM_BUILT_IN_RECORD_TYPE_SYMBOL:
+                {
+                    uint32_t *symdata = EBM_record_ref_CA(object,2);
+                    uintptr_t len = 0;
+                    while (symdata[len]){
+                        len++;
+                    }
+                    EBM_olisp_gc_mark_and_check_black(symdata, EBM_olisp_gc_count_valid_bit(len*sizeof(uint32_t)), env_ptr,_INFINTY32);
+                }
+                break;
+            case EBM_BUILT_IN_RECORD_TYPE_PORT :
+                {}
+                break;
+            case EBM_BUILT_IN_RECORD_TYPE_VECTOR:
+                {
+                    int i;
+                    for (i=0;i<EBM_record_length_CR(object);i++){
+                        EBM_olisp_tiny_gc_full_mark(EBM_record_ref_CA(object,i),env_ptr);
+                    }
+                }
+                break;
+            case EBM_BUILT_IN_RECORD_TYPE_SYMBOL_TRIE:
+                {
+                    uintptr_t array_size =
+                        EBM_olisp_gc_count_valid_bit(EBM_record_ref_CA(object,1) * EBM_record_ref_CA(object,2));
+
+                    EBM_olisp_gc_mark_and_check_black(EBM_record_ref_CA(object,3), array_size, env_ptr,_INFINTY32);
+                    EBM_olisp_gc_mark_and_check_black(EBM_record_ref_CA(object,4), array_size, env_ptr,_INFINTY32);
+                    EBM_olisp_gc_mark_and_check_black(EBM_record_ref_CA(object,5),  EBM_olisp_gc_count_valid_bit(EBM_record_ref_CA(object,1) * sizeof(uintptr_t)) , env_ptr,_INFINTY32);
+
+                    int i;
+                    uintptr_t *items = EBM_record_ref_CA(object,5);
+                    for (i=0;i<EBM_record_ref_CA(object,1);i++){
+                        EBM_olisp_tiny_gc_full_mark(items[i],env_ptr);
+                    }
+                    EBM_olisp_tiny_gc_full_mark(EBM_record_ref_CA(object,6),env_ptr);
+                    EBM_olisp_tiny_gc_full_mark(EBM_record_ref_CA(object,7),env_ptr);
+                }
+                break;
+            case EBM_BUILT_IN_RECORD_TYPE_BYTE_VECTOR:
+                {
+                    EBM_olisp_gc_mark_and_check_black(
+                            EBM_record_ref_CA(object,1),
+                        EBM_olisp_gc_count_valid_bit(
+                                 EBM_record_ref_CA(object,2)),env_ptr,_INFINTY32);
+                }
+                break;
+           default:
+                {
+                    printf("%ld !!!!!|\n",EBM_record_ref_CA(object,0));
+                    
+                }
+
+
+        }
+    }   
+}
+
+uintptr_t EBM_olisp_tiny_gc_full_free(uintptr_t env_ptr){
+       
+    olisp_tiny_gc_env *env = (olisp_tiny_gc_env*)EBM_pointer_box_ref_CR(env_ptr);
+    uintptr_t arena = env->arena;
+    
+    {//allocate static size pool
+        int i;
+        for (i=0;i<EBM_NUMBER_OF_POOL;i++){
+            uintptr_t pool = EBM_vector_ref_CA(arena,i+OLISP_TINY_GC_ARENA_POOL_START);
+
+            uint32_t*  mark_ptr = 
+                (uint32_t*)EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,1));
+            int j,bit,mark_ptr_index = -1;
+
+
+            uintptr_t sz = EBM_FX_NUMBER_TO_C_INTEGER_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_POOL_TARGET_SIZE));
+            int loop_size = 
+                (EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_CURRENT))-
+                EBM_pointer_box_ref_CR(EBM_vector_ref_CA(pool,OLISP_TINY_GC_PTR_START)))/(sz*sizeof(uintptr_t));
+            for (j=0;j<loop_size;j++){
+                if (j%16==0){
+                    bit = 1;
+                    mark_ptr_index++;
+                }
+
+                if (!mark_ptr[mark_ptr_index]&bit){
+                    uintptr_t freed_ptr = EBM_pointer_box_ref_CR(EBM_vector_ref_CA( pool, OLISP_TINY_GC_PTR_START)) + sizeof(uintptr_t) * (i+1) * j;
+                    EBM_PRIMITIVE_SET_CAR(
+                            freed_ptr,
+                            EBM_vector_ref_CA(
+                                pool,
+                                OLISP_TINY_GC_FREE_PTRS));
+
+                    EBM_vector_primitive_set_CA(
+                            pool,
+                            OLISP_TINY_GC_FREE_PTRS,
+                            freed_ptr);
+                }
+                bit<<2;
+            }
+        }
+    }
+
+}
